@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 import pysolar.solar as solar
+import random
 
 ########### Get parameters ########### 
 
@@ -139,12 +140,6 @@ def get_pv_output(insolation_profile, pv_efficiency, pv_capacity):
     # Calculate daily PV output profile
     pv_output_profile = [pv_capacity * pv_efficiency * i / 1000 for i in insolation_profile]
 
-    # # Plot the average daily PV output profile 
-    # plt.plot(pv_output_profile)
-    # plt.xlabel('Time of Day (minutes)')
-    # plt.ylabel('PV Output (kW)')
-    # plt.grid(True)
-    # plt.show()
     
     return pv_output_profile
 

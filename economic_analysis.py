@@ -2,26 +2,84 @@ import numpy as np
 
 ########### Cost of charging ########### 
 
-def cost_of_charging(load_profile, pv_output_profile, energy_usage_cost):
+def get_cost_of_charging(load_profile: np.ndarray, net_load_profile: np.ndarray,
+                         time_of_use_tariffs: dict, time_periods: dict,
+                         feed_in_tariff: int,
+                         feed_in_tariff_bool: bool):
     
-    net_load_profile = load_profile - pv_output_profile # (list) charging load in each hour of the yaer net of solar PV output 
-
-    net_load_profile = np.array(net_load_profile, dtype=int)
-   # Initialize total cost variables
-    cost_no_pv = []
-    cost_with_pv =  []
+    # Obtain energy costs for each time period of the day
+    morning_cost = time_of_use_tariffs['morning']
+    afternoon_cost = time_of_use_tariffs['afternoon']
+    evening_cost = time_of_use_tariffs['evening']
+    night_cost = time_of_use_tariffs['night']
+    
+    # Obtain time periods for each time period of the day
+    morning_start = time_periods['morning_start']
+    afternoon_start = time_periods['afternoon_start']
+    evening_start = time_periods['evening_start']
+    night_start = time_periods['night_start']
+    
+    # Initialize total cost variables
+    total_cost_no_pv = np.zeros(len(load_profile))
+    total_cost_with_pv = np.zeros(len(net_load_profile))
     
     # Calculate total cost of energy with and without PV
 
-    for i in range(len(load_profile)):
-        cost_no_pv.append(load_profile[i] * energy_usage_cost)
-        cost_with_pv.append(net_load_profile[i] * energy_usage_cost)
+    for i in range(len(total_cost_no_pv)):
+        curr_hour_of_day = i % 24
+        
+        if morning_start <= curr_hour_of_day < afternoon_start:
+            # Without PV
+            total_cost_no_pv[i] = load_profile[i] * morning_cost
+            # With PV
+            if net_load_profile[i] < 0: # PV output is greater than EV load
+                
+                if feed_in_tariff_bool: # if there is a feed-in-tariff 
+                    total_cost_with_pv[i] = net_load_profile[i] * feed_in_tariff # apply feed-in tariff
+                else:
+                    total_cost_with_pv[i] = 0 # otherwise, energy is simply curtailed and there is no cost
+            else:
+                total_cost_with_pv[i] = net_load_profile[i] * morning_cost
             
-    # Convert cost_no_pv and cost_with_pv to numpy arrays
-    cost_no_pv = np.array(cost_no_pv)
-    cost_with_pv = np.array(cost_with_pv)
-    
-    return cost_no_pv, cost_with_pv 
+        elif afternoon_start <= curr_hour_of_day < evening_start:
+            
+            total_cost_no_pv[i] = load_profile[i] * afternoon_cost
+            
+            if net_load_profile[i] < 0:
+                if feed_in_tariff_bool:
+                    total_cost_with_pv[i] = net_load_profile[i] * feed_in_tariff
+                else:
+                    total_cost_with_pv[i] = 0
+            else:
+                total_cost_with_pv[i] = net_load_profile[i] * afternoon_cost
+                
+        elif evening_start <= curr_hour_of_day < night_start:
+            
+            total_cost_no_pv[i] = load_profile[i] * evening_cost
+            
+            if net_load_profile[i] < 0:
+                if feed_in_tariff_bool:
+                    total_cost_with_pv[i] = net_load_profile[i] * feed_in_tariff
+                else:
+                    total_cost_with_pv[i] = 0
+            else:
+                total_cost_with_pv[i] = net_load_profile[i] * evening_cost
+                
+        else:
+            
+            total_cost_no_pv[i] = load_profile[i] * night_cost
+            
+            if net_load_profile[i] < 0:
+                if feed_in_tariff_bool:
+                    total_cost_with_pv[i] = net_load_profile[i] * feed_in_tariff
+                else: 
+                    total_cost_with_pv[i] = 0
+                
+            else:
+                total_cost_with_pv[i] = net_load_profile[i] * night_cost
+                
+        
+    return total_cost_no_pv, total_cost_with_pv 
 
 ########### NPV ########### 
 
@@ -62,7 +120,7 @@ def get_cost_of_missed_passengers_from_loadshedding(kWh_affected_by_loadshedding
 
     for hour, kWh in enumerate(kWh_affected_by_loadshedding):
         
-        curr_hour_of_day = i % 24
+        curr_hour_of_day = hour % 24
         
         if morning_start <= curr_hour_of_day < afternoon_start:
             passengers_missed[hour] = kWh * morning_passenger_per_kWh
