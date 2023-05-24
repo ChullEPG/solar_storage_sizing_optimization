@@ -143,8 +143,11 @@ def get_pv_output(insolation_profile, pv_efficiency, pv_capacity):
     
     return pv_output_profile
 
+# PV Output with battery storage 
 
-def simulate_battery_storage(load_profile, pv_output_profile, max_battery_capacity):
+def simulate_battery_storage(load_profile, pv_output_profile, 
+                             max_battery_capacity):
+        
     battery_state = 0  # Initial state of the battery
 
     storage_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy stored in the battery
@@ -183,6 +186,139 @@ def simulate_battery_storage(load_profile, pv_output_profile, max_battery_capaci
   #  load_profile_with_battery = load_profile - pv_with_battery_output_profile
     
     return pv_with_battery_output_profile
+
+def simulate_battery_storage_wip(load_profile, pv_output_profile, 
+                             max_battery_capacity, battery_duration,
+                             charging_efficiency, discharging_efficiency):
+    battery_rating = max_battery_capacity / battery_duration 
+
+    
+    battery_state = 0  # Initial state of the battery
+
+    storage_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy stored in the battery
+    discharge_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
+    curtailed_energies = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the wasted energies
+    battery_states = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the battery state
+
+    for hour, load in enumerate(load_profile):
+        net_load = load - pv_output_profile[hour]  # Calculate the net load profile
+        
+        battery_room = max_battery_capacity - battery_state # Calculate the amount of room left in the battery
+        
+        energy_stored = 0
+        energy_discharged = 0
+        curtailed_energy = 0
+        
+        if net_load < 0:
+            # The PV system is producing more energy than the load requires
+            # Charge the battery with the excess energy
+            energy_stored = min(battery_room, -net_load, battery_rating)
+            battery_state = battery_state + energy_stored
+            curtailed_energy = -net_load - energy_stored
+            
+        elif net_load > 0:
+            # The PV system is producing less energy than the load requires
+            # Discharge the battery to assist with the load 
+            energy_discharged = min(battery_state, net_load, battery_rating)
+            battery_state = battery_state - energy_discharged
+            
+        curtailed_energies[hour] = curtailed_energy
+        battery_states[hour] = battery_state
+        storage_profile[hour] = energy_stored
+        discharge_profile[hour] = energy_discharged
+        
+    pv_with_battery_output_profile = pv_output_profile + discharge_profile - storage_profile 
+  #  load_profile_with_battery = load_profile - pv_with_battery_output_profile
+    
+    return pv_with_battery_output_profile
+
+
+def simulate_battery_storage_v2(load_profile, pv_output_profile, 
+                             battery_capacity, battery_duration,
+                             charging_efficiency, discharging_efficiency):
+    
+    battery_power_rating = battery_capacity / battery_duration # Calculate the power rating of the battery
+    
+    battery_state = 0  # Initial state of the battery
+
+    battery_states = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the battery state
+    
+    
+    # Taken
+    battery_storage_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy stored in the battery
+    battery_discharge_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
+
+    # Losses 
+    losses_from_efficiency = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the wasted energies
+    losses_from_curtailment = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the wasted energies
+    
+    # Useful 
+    battery_energy_draw_from_pv_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
+    load_energy_received_from_battery_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
+    
+
+    for hour, load in enumerate(load_profile):
+        net_load = load - pv_output_profile[hour]  # Calculate the net load profile
+        
+        battery_room = battery_capacity - battery_state # Calculate the amount of room left in the battery
+        
+        # Taken 
+        energy_stored_in_battery = 0
+        energy_discharged_from_battery = 0
+
+        # Losses
+        loss_from_efficiency = 0
+        loss_from_curtailment = 0
+        
+        # Useful
+        energy_drawn_from_pv = 0
+        energy_received_by_load = 0
+        
+        if net_load < 0:
+            # The PV system is producing more energy than the load requires
+            # Charge the battery with the excess energy
+            energy_drawn_from_pv = min(battery_room/charging_efficiency, -net_load, battery_power_rating)
+            energy_stored_in_battery = energy_drawn_from_pv * charging_efficiency
+            
+            # Update battery state 
+            battery_state = battery_state + energy_stored_in_battery
+            
+            # Losses 
+            loss_from_efficiency = energy_drawn_from_pv - energy_stored_in_battery
+            loss_from_curtailment = -net_load - energy_drawn_from_pv
+            
+        elif net_load >= 0:
+            # The PV system is producing less energy than the load requires
+            # Discharge the battery to assist with the load
+            energy_discharged_from_battery = min(battery_state, net_load/discharging_efficiency, battery_power_rating)  
+            energy_received_by_load = energy_discharged_from_battery * discharging_efficiency
+            
+            # Update battery state 
+            battery_state = battery_state - energy_discharged_from_battery
+            
+            # Losses
+            loss_from_efficiency = energy_discharged_from_battery - energy_received_by_load
+            loss_from_curtailment = 0
+            
+
+        battery_states[hour] = battery_state
+
+        # Taken
+        battery_storage_profile[hour] = energy_stored_in_battery
+        battery_discharge_profile[hour] = energy_discharged_from_battery
+        
+        # Losses
+        losses_from_efficiency[hour] = loss_from_efficiency
+        losses_from_curtailment[hour] = loss_from_curtailment
+        
+        # Useful 
+        battery_energy_draw_from_pv_profile[hour] = energy_drawn_from_pv
+        load_energy_received_from_battery_profile[hour] = energy_received_by_load
+        
+    pv_with_battery_output_profile = pv_output_profile + load_energy_received_from_battery_profile - battery_energy_draw_from_pv_profile
+    
+    return pv_with_battery_output_profile
+
 
 ########### Loadshedding ########### 
 

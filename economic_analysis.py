@@ -1,5 +1,20 @@
 import numpy as np
 
+
+########### NPV ########### 
+
+def calculate_npv(initial_investment, cash_flows, discount_rate):
+    values = []
+    for idx, cash_flow in enumerate(cash_flows):
+        this_year_value = cash_flow /(1 + discount_rate)**idx
+        values.append(this_year_value)
+    total_benefits = sum(values)
+    total_costs = initial_investment
+    npv = total_benefits - total_costs
+    return npv
+
+
+
 ########### Cost of charging ########### 
 
 def get_cost_of_charging(load_profile: np.ndarray, net_load_profile: np.ndarray,
@@ -80,19 +95,6 @@ def get_cost_of_charging(load_profile: np.ndarray, net_load_profile: np.ndarray,
                 
         
     return total_cost_no_pv, total_cost_with_pv 
-
-########### NPV ########### 
-
-def calculate_npv(initial_investment, cash_flows, discount_rate):
-    values = []
-    for idx, cash_flow in enumerate(cash_flows):
-        this_year_value = cash_flow /(1 + discount_rate)**idx
-        values.append(this_year_value)
-    total_benefits = sum(values)
-    total_costs = initial_investment
-    npv = total_benefits - total_costs
-    return total_benefits, total_costs, npv
-
 
 ########### Cost of loadshedding ########### 
 
