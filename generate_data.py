@@ -143,97 +143,8 @@ def get_pv_output(insolation_profile, pv_efficiency, pv_capacity):
     
     return pv_output_profile
 
-# PV Output with battery storage 
-
+# PV Output with battery storage
 def simulate_battery_storage(load_profile, pv_output_profile, 
-                             max_battery_capacity):
-        
-    battery_state = 0  # Initial state of the battery
-
-    storage_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy stored in the battery
-    discharge_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
-    curtailed_energies = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the wasted energies
-    battery_states = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the battery state
-
-    for hour, load in enumerate(load_profile):
-        net_load = load - pv_output_profile[hour]  # Calculate the net load profile
-        
-        battery_room = max_battery_capacity - battery_state # Calculate the amount of room left in the battery
-        
-        energy_stored = 0
-        energy_discharged = 0
-        curtailed_energy = 0
-        
-        if net_load < 0:
-            # The PV system is producing more energy than the load requires
-            # Charge the battery with the excess energy
-            energy_stored = min(battery_room, -net_load)
-            battery_state = battery_state + energy_stored
-            curtailed_energy = -net_load - energy_stored
-            
-        elif net_load > 0:
-            # The PV system is producing less energy than the load requires
-            # Discharge the battery to assist with the load 
-            energy_discharged = min(battery_state, net_load)
-            battery_state = battery_state - energy_discharged
-            
-        curtailed_energies[hour] = curtailed_energy
-        battery_states[hour] = battery_state
-        storage_profile[hour] = energy_stored
-        discharge_profile[hour] = energy_discharged
-        
-    pv_with_battery_output_profile = pv_output_profile + discharge_profile - storage_profile 
-  #  load_profile_with_battery = load_profile - pv_with_battery_output_profile
-    
-    return pv_with_battery_output_profile
-
-def simulate_battery_storage_wip(load_profile, pv_output_profile, 
-                             max_battery_capacity, battery_duration,
-                             charging_efficiency, discharging_efficiency):
-    battery_rating = max_battery_capacity / battery_duration 
-
-    
-    battery_state = 0  # Initial state of the battery
-
-    storage_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy stored in the battery
-    discharge_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
-    curtailed_energies = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the wasted energies
-    battery_states = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the battery state
-
-    for hour, load in enumerate(load_profile):
-        net_load = load - pv_output_profile[hour]  # Calculate the net load profile
-        
-        battery_room = max_battery_capacity - battery_state # Calculate the amount of room left in the battery
-        
-        energy_stored = 0
-        energy_discharged = 0
-        curtailed_energy = 0
-        
-        if net_load < 0:
-            # The PV system is producing more energy than the load requires
-            # Charge the battery with the excess energy
-            energy_stored = min(battery_room, -net_load, battery_rating)
-            battery_state = battery_state + energy_stored
-            curtailed_energy = -net_load - energy_stored
-            
-        elif net_load > 0:
-            # The PV system is producing less energy than the load requires
-            # Discharge the battery to assist with the load 
-            energy_discharged = min(battery_state, net_load, battery_rating)
-            battery_state = battery_state - energy_discharged
-            
-        curtailed_energies[hour] = curtailed_energy
-        battery_states[hour] = battery_state
-        storage_profile[hour] = energy_stored
-        discharge_profile[hour] = energy_discharged
-        
-    pv_with_battery_output_profile = pv_output_profile + discharge_profile - storage_profile 
-  #  load_profile_with_battery = load_profile - pv_with_battery_output_profile
-    
-    return pv_with_battery_output_profile
-
-
-def simulate_battery_storage_v2(load_profile, pv_output_profile, 
                              battery_capacity, battery_duration,
                              charging_efficiency, discharging_efficiency):
     
@@ -323,6 +234,9 @@ def simulate_battery_storage_v2(load_profile, pv_output_profile,
 ########### Loadshedding ########### 
 
 def generate_loadshedding_schedule(loadshedding_probability, set_random_seed = True):
+    ''' 
+    Generates loadshedding schedulef from average annual loadshedding probability [requires 1 value]
+    '''
     schedule = []
     hours_in_year = 365 * 24  # Assuming a non-leap year
     
@@ -342,6 +256,28 @@ def generate_loadshedding_schedule(loadshedding_probability, set_random_seed = T
             schedule.append(False)  # No load shedding
             
     return schedule
+
+
+def generate_stochastic_loadshedding_schedule(shedding_profile, set_random_seed = False):
+    '''
+    Generates loadshedding schedule from hourly probabiilty profile [requires 24 values]
+    '''
+    if set_random_seed:
+        random.seed(0)
+        
+    hours_in_year = 365 * 24
+    load_shedding_schedule = []
+    
+    for hour in range(hours_in_year):
+        curr_hour = hour % 24
+        prob = shedding_profile[curr_hour]
+        shedding = 1 if random.random() < prob else 0
+        load_shedding_schedule.append(shedding)
+    
+    return load_shedding_schedule
+
+
+
 
 ########### Battery discharge ########### 
 

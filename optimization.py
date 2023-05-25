@@ -29,10 +29,7 @@ def objective_function(x, a):
     loadshedding_schedule = generate_data.generate_loadshedding_schedule(a['loadshedding_probability'])
     
     # Generate PV output profile with battery
-    #pv_with_battery_output_profile = generate_data.simulate_battery_storage_wip(a['load_profile'], pv_output_profile, 
-                                                                             #   battery_capacity, a['battery_duration'])
-    
-    pv_with_battery_output_profile = generate_data.simulate_battery_storage_v2(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
+    pv_with_battery_output_profile = generate_data.simulate_battery_storage(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
                                                                             a['battery_charging_efficiency'], a['battery_discharging_efficiency'])
     # Net charging load profile 
     net_load_profile = a['load_profile'] - pv_with_battery_output_profile
