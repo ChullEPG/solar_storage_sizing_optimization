@@ -13,6 +13,67 @@ def calculate_npv(initial_investment, cash_flows, discount_rate):
     npv = total_benefits - total_costs
     return npv
 
+def calculate_npv_with_loan(initial_investment, residual_cost_of_panels_owed, loan_payback_period, 
+                            energy_savings_per_year,
+                            operational_savings_per_year,
+                           carbon_savings_per_year,
+                           discount_rate, Rproj):
+    # Payback 
+    payments = residual_cost_of_panels_owed / loan_payback_period
+    
+    # Revenues TODO: In future versions these will need to be calculated separately for each period, for now assume constant in all periods
+    revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year for i in range(Rproj)]
+    
+    costs = np.zeros(len(revenues))
+    # Fill the first num_periods elements of costs with PAYS_payback_per_period
+    costs[:loan_payback_period] = payments
+    
+    cash_flows = [revenue - cost for revenue,cost in zip(revenues,costs)]
+    
+    values = []
+    for idx, cash_flow in enumerate(cash_flows):
+        this_year_value = cash_flow /(1 + discount_rate)**idx
+        values.append(this_year_value)
+        
+    npv = sum(values) - initial_investment
+        
+    return npv 
+
+
+def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed, PAYS_cut_of_savings, 
+                            energy_savings_per_year,
+                            operational_savings_per_year,
+                           carbon_savings_per_year,
+                           discount_rate, Rproj):
+    # Payback
+    PAYS_payback_per_period = energy_savings_per_year * PAYS_cut_of_savings
+    
+    # Revenues TODO: In future versions these will need to be calculated separately for each period, for now assume constant in all periods
+    revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year for i in range(Rproj)]
+    
+    # Costs
+    num_periods = 0
+    paid_back = 0
+    while paid_back < residual_cost_of_panels_owed:
+        paid_back += PAYS_payback_per_period
+        num_periods += 1 
+        
+    costs = np.zeros(len(revenues))
+    # Fill the first num_periods elements of costs with PAYS_payback_per_period
+    costs[:num_periods] = PAYS_payback_per_period
+    
+        
+    cash_flows = [revenue - cost for revenue,cost in zip(revenues,costs)]
+    
+    values = []
+    for idx, cash_flow in enumerate(cash_flows):
+        this_year_value = cash_flow /(1 + discount_rate)**idx
+        values.append(this_year_value)
+        
+    npv = sum(values) - initial_investment
+        
+    return npv 
+
 
 
 ########### Cost of charging ########### 
