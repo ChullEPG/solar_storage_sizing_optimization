@@ -52,16 +52,24 @@ def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed, PA
     revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year for i in range(Rproj)]
     
     # Costs
-    num_periods = 0
-    paid_back = 0
-    while paid_back < residual_cost_of_panels_owed:
-        paid_back += PAYS_payback_per_period
-        num_periods += 1 
+    payback_per_period = max(PAYS_payback_per_period, residual_cost_of_panels_owed/Rproj)
+    
+    if payback_per_period == residual_cost_of_panels_owed/Rproj:
+        num_periods = Rproj
+    else: 
+        num_periods = 0
+        paid_back = 0
+        while paid_back < residual_cost_of_panels_owed:
+            paid_back += payback_per_period
+            num_periods += 1 
         
     costs = np.zeros(len(revenues))
-    # Fill the first num_periods elements of costs with PAYS_payback_per_period
-    costs[:num_periods] = PAYS_payback_per_period
     
+    # Fill the first num_periods elements of costs with PAYS_payback_per_period
+    costs[:num_periods] = payback_per_period
+    
+    # Adjust the last filled element of cost so that the sum of costs is equal to residual_cost_of_panels_owed
+    costs[num_periods - 1] = costs[num_periods - 1] + (residual_cost_of_panels_owed - sum(costs[:num_periods]))
         
     cash_flows = [revenue - cost for revenue,cost in zip(revenues,costs)]
     

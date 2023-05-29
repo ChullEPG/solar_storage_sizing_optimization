@@ -235,6 +235,10 @@ def objective_function_PAYS(x,a):
     battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
     total_capital_cost = pv_capital_cost + battery_capital_cost
     
+    #### PAYS Business Model ####
+    upfront_payment = a['PAYS_capital_cost_adjustment'] * total_capital_cost # (int) upfront payment for panels
+    residual_cost_of_panels_owed = total_capital_cost - upfront_payment # (int) residual cost of panels owed
+    
     # Generate PV Output profile 
     pv_output_profile = generate_data.get_pv_output(a['annual_insolation_profile'], a['pv_efficiency'], pv_capacity) 
     
@@ -276,16 +280,19 @@ def objective_function_PAYS(x,a):
     # Energy  
     energy_savings_per_year = energy_cost_without_pv.sum() - energy_cost_with_pv.sum() # (float) revenue per year from energy savings 
     
-
     
     # Operational
     operational_savings_per_year = value_of_charging_saved_by_pv_from_loadshedding.sum() # (float) revenue per year from saved passengers
     
     # Total 
-    cash_flows = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year for i in range(a['Rproj'])]
+    #cash_flows = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year for i in range(a['Rproj'])]
 
     ##### Calculate NPV #####
-    npv = economic_analysis.calculate_npv(total_capital_cost, cash_flows, a['discount_rate'])
+    npv = economic_analysis.calculate_npv_with_PAYS(upfront_payment, residual_cost_of_panels_owed, a['PAYS_cut_of_savings'], 
+                            energy_savings_per_year,
+                            operational_savings_per_year,
+                           carbon_savings_per_year,
+                           a['discount_rate'], a['Rproj'])
     
     return -npv 
 
@@ -310,3 +317,35 @@ def objective_function_PAYS(x,a):
 #     not_covered = [net_load_profile[i] for i, is_shedding in enumerate(loadshedding_schedule) if is_shedding and net_load_profile[i] > 0]
 
 #     return sum(not_covered) # return the number of hours that are not covered by solar + battery
+
+
+def plot_sensitivities(sensitivity_var, vals, a):
+    
+    
+    bounds = [(1,100), (1,100)]
+    initial_guess = [20, 20]
+    
+    optimal_pv_capacities = []
+    optimal_battery_capacities = []
+    npvs = []
+    
+    for val in vals:
+        # Set the value of the sensitivity parameter
+        a[sensitivity_var] = val # change the sensitivity variable
+        
+        # Optimize
+        result = minimize(objective_function_PAYS, x0 = initial_guess, args = (a,), bounds=bounds, method='SLSQP')
+
+        # Extract the optimal capacity
+        optimal_pv_capacity = result.x[0]
+        optimal_battery_capacity = result.x[1]
+
+        # Calculate the minimum cash flow
+        max_npv = result.fun
+        
+        
+        optimal_pv_capacities.append(optimal_pv_capacity)
+        optimal_battery_capacities.append(optimal_battery_capacity)
+        npvs.append(max_npv)
+    
+    return npvs, optimal_battery_capacities, optimal_pv_capacities
