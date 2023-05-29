@@ -19,8 +19,8 @@ def objective_function(x, a):
     battery_capacity = x[1]
     
     # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** 1.5   # (int) capital cost of PV system 
-    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
+    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']  # (int) capital cost of PV system 
+    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent']  # (int) capital cost of battery
     total_capital_cost = pv_capital_cost + battery_capital_cost
     
     # Generate PV Output profile 
@@ -82,8 +82,8 @@ def objective_function_with_loadshedding_penalty(x, a):
     battery_capacity = x[1]
     
     # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** 1.5   # (int) capital cost of PV system 
-    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
+    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']     # (int) capital cost of PV system 
+    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent'] # (int) capital cost of battery
     total_capital_cost = pv_capital_cost + battery_capital_cost
     
     #### PAYS Business Model ####
@@ -159,8 +159,8 @@ def objective_function_for_loan(x, a):
     battery_capacity = x[1]
     
     # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** 1.5   # (int) capital cost of PV system 
-    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
+    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']   # (int) capital cost of PV system 
+    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent'] # (int) capital cost of battery
     total_capital_cost = pv_capital_cost + battery_capital_cost
     
     #### PAYS Business Model ####
@@ -232,8 +232,8 @@ def objective_function_PAYS(x,a):
     battery_capacity = x[1]
     
     # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** 1.5   # (int) capital cost of PV system 
-    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
+    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']    # (int) capital cost of PV system 
+    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent']   # (int) capital cost of battery
     total_capital_cost = pv_capital_cost + battery_capital_cost
     
     #### PAYS Business Model ####
@@ -320,32 +320,49 @@ def objective_function_PAYS(x,a):
 #     return sum(not_covered) # return the number of hours that are not covered by solar + battery
 
 
-def plot_sensitivities(sensitivity_var, vals, bounds, initial_guess, a):
+def plot_sensitivities(sensitivity_var, vals, bounds, initial_guess, a, objective_function):
     
     
     optimal_pv_capacities = []
     optimal_battery_capacities = []
     npvs = []
     
+    pv_capital_costs = []
+    battery_capital_costs = []
+    total_capital_costs = []
+    
     for val in vals:
         # Set the value of the sensitivity parameter
         a[sensitivity_var] = val # change the sensitivity variable
         
         # Optimize
-        result = minimize(objective_function_PAYS, x0 = initial_guess, args = (a,), bounds=bounds, method='SLSQP')
+        result = minimize(objective_function, x0 = initial_guess, args = (a,), bounds=bounds, method='SLSQP')
 
         # Extract the optimal capacity
         optimal_pv_capacity = result.x[0]
         optimal_battery_capacity = result.x[1]
 
         # Calculate the minimum cash flow
-        max_npv = result.fun
+        max_npv = -result.fun
         
-        
+        # Store results
         optimal_pv_capacities.append(optimal_pv_capacity)
         optimal_battery_capacities.append(optimal_battery_capacity)
         npvs.append(max_npv)
         
+        
+        # Calculate Capital Cost of Investments 
+        pv_capital_cost = optimal_pv_capacity * a['pv_cost_per_kw'] ** 1.2 + a['additional_pv_capital_cost']
+        battery_capital_cost = optimal_battery_capacity * a['battery_cost_per_kWh'] ** 1.2
+        total_capital_cost = pv_capital_cost + battery_capital_cost
+        
+        # Store results 
+        pv_capital_costs.append(pv_capital_cost)
+        battery_capital_costs.append(battery_capital_cost)
+        total_capital_costs.append(total_capital_cost)
+        
+        
+    # Plot sensitivities (results)
     fig, ax1 = plt.subplots() 
     ax1.plot(vals, optimal_pv_capacities, label = 'PV Capacity (kW)')
     ax1.plot(vals, optimal_battery_capacities, label = 'Battery Capacity (kWh)')
@@ -359,4 +376,13 @@ def plot_sensitivities(sensitivity_var, vals, bounds, initial_guess, a):
     fig.legend(loc = 'upper right')
     plt.show()
     
-    return npvs, optimal_battery_capacities, optimal_pv_capacities
+    # Plot sensitivities (capital costs)
+    plt.plot(vals, pv_capital_costs, label = 'PV Capital Cost')
+    plt.plot(vals, battery_capital_costs, label = 'Battery Capital Cost')
+    plt.plot(vals, total_capital_costs, label = 'Total Capital Cost')
+    plt.xlabel(sensitivity_var)
+    plt.ylabel('Capital Cost ($)')
+    plt.legend()
+    plt.show()
+    
+    return npvs, optimal_battery_capacities, optimal_pv_capacities, pv_capital_costs, battery_capital_costs, total_capital_costs
