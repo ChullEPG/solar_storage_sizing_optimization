@@ -4,6 +4,7 @@ from importlib import reload
 import numpy as np 
 import economic_analysis
 import generate_data
+import matplotlib.pyplot as plt
 
 
 ##### CUYRRENT ISSUE IS WHEN I AM RUNNING OPTIMIZATION.PY VS THE DIRECT OPTIMIZATION IN FEASIBLITY ANALYSIS I GET DIFF ANSWERS 
@@ -319,11 +320,8 @@ def objective_function_PAYS(x,a):
 #     return sum(not_covered) # return the number of hours that are not covered by solar + battery
 
 
-def plot_sensitivities(sensitivity_var, vals, a):
+def plot_sensitivities(sensitivity_var, vals, bounds, initial_guess, a):
     
-    
-    bounds = [(1,100), (1,100)]
-    initial_guess = [20, 20]
     
     optimal_pv_capacities = []
     optimal_battery_capacities = []
@@ -347,5 +345,18 @@ def plot_sensitivities(sensitivity_var, vals, a):
         optimal_pv_capacities.append(optimal_pv_capacity)
         optimal_battery_capacities.append(optimal_battery_capacity)
         npvs.append(max_npv)
+        
+    fig, ax1 = plt.subplots() 
+    ax1.plot(vals, optimal_pv_capacities, label = 'PV Capacity (kW)')
+    ax1.plot(vals, optimal_battery_capacities, label = 'Battery Capacity (kWh)')
+    ax1.set_xlabel(sensitivity_var)
+    ax1.set_ylabel('Capacity')
+
+    ax2 = ax1.twinx()
+    ax2.plot(vals, npvs, label = 'NPV', color = 'black')
+    ax2.set_ylabel('NPV ($)')
+
+    fig.legend(loc = 'upper right')
+    plt.show()
     
     return npvs, optimal_battery_capacities, optimal_pv_capacities
