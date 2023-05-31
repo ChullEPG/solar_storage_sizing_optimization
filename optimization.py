@@ -302,27 +302,27 @@ def objective_function_PAYS(x,a):
     
     return -npv 
 
-# def avoid_loadshedding(x, a):
-#     # Decision variables - PV capacity and Battery capacity 
-#     pv_capacity = x[0]
-#     battery_capacity = x[1]
+def avoid_loadshedding(x, a):
+    # Decision variables - PV capacity and Battery capacity 
+    pv_capacity = x[0]
+    battery_capacity = x[1]
     
-#     # Generate PV Output profile 
-#     pv_output_profile = generate_data.get_pv_output(a['annual_insolation_profile'], a['pv_efficiency'], pv_capacity) 
+    # Generate PV Output profile 
+    pv_output_profile = generate_data.get_pv_output(a['annual_insolation_profile'], a['pv_efficiency'], pv_capacity) 
     
-#     # Generate load shedding schedule 
-#     loadshedding_schedule = generate_data.generate_loadshedding_schedule(a['loadshedding_probability'])
+    # Generate load shedding schedule 
+    loadshedding_schedule = generate_data.generate_loadshedding_schedule(a['loadshedding_probability'])
     
-#     # Generate PV output profile with battery
-#     pv_with_battery_output_profile = generate_data.simulate_battery_storage(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
-#                                                                             a['battery_charging_efficiency'], a['battery_discharging_efficiency'])
-#     # Net charging load profile 
-#     net_load_profile = a['load_profile'] - pv_with_battery_output_profile
+    # Generate PV output profile with battery
+    pv_with_battery_output_profile = generate_data.simulate_battery_storage(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
+                                                                            a['battery_charging_efficiency'], a['battery_discharging_efficiency'])
+    # Net charging load profile 
+    net_load_profile = a['load_profile'] - pv_with_battery_output_profile
 
-#     # Find all hours with loadshedding where the net load is positive (i.e. where solar + battery do not provide complete coverage of loadshedding)
-#     not_covered = [net_load_profile[i] for i, is_shedding in enumerate(loadshedding_schedule) if is_shedding and net_load_profile[i] > 0]
+    # Find all hours with loadshedding where the net load is positive (i.e. where solar + battery do not provide complete coverage of loadshedding)
+    not_covered = [net_load_profile[i] for i, is_shedding in enumerate(loadshedding_schedule) if is_shedding and net_load_profile[i] > 0]
 
-#     return sum(not_covered) # return the number of hours that are not covered by solar + batter
+    return -sum(not_covered) # return the number of hours that are not covered by solar + batter
 
 
 def cover_loadshedding_v2(num_vehicles, vehicle_battery_size):
