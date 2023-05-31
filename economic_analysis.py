@@ -13,6 +13,7 @@ def calculate_npv(initial_investment, cash_flows, discount_rate):
     npv = total_benefits - total_costs
     return npv
 
+
 def calculate_npv_with_loan(initial_investment, residual_cost_of_panels_owed, loan_payback_period, 
                             energy_savings_per_year,
                             operational_savings_per_year,
@@ -83,6 +84,23 @@ def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed, PA
     return npv 
 
 
+########## Investment Cost ############
+
+def calculate_capital_investment(pv_capacity, battery_capacity, a):
+    # Capital Cost of Investment 
+    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']     # (int) capital cost of PV system 
+    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent'] # (int) capital cost of battery
+    total_capital_cost = pv_capital_cost + battery_capital_cost
+    
+    return total_capital_cost
+
+
+########## Payback period ############
+def calculate_payback_period(initial_investment, cash_flows):
+    # Calculate payback period
+    cumulative_cash_flows = np.cumsum(cash_flows)
+    payback_period = np.argmax(cumulative_cash_flows > initial_investment)
+    return payback_period
 
 ########### Cost of charging ########### 
 

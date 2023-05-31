@@ -66,6 +66,7 @@ def objective_function(x, a):
     
     # Operational
     operational_savings_per_year = value_of_charging_saved_by_pv_from_loadshedding.sum() # (float) revenue per year from saved passengers
+    #operational_savings_per_year = 0
     
     # Total 
     cash_flows = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year for i in range(a['Rproj'])]
@@ -82,9 +83,11 @@ def objective_function_with_loadshedding_penalty(x, a):
     battery_capacity = x[1]
     
     # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']     # (int) capital cost of PV system 
-    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent'] # (int) capital cost of battery
-    total_capital_cost = pv_capital_cost + battery_capital_cost
+    # pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']     # (int) capital cost of PV system 
+    # battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent'] # (int) capital cost of battery
+    # total_capital_cost = pv_capital_cost + battery_capital_cost
+    
+    total_capital_cost = economic_analysis.calculate_capital_investment(pv_capacity, battery_capacity, a)
     
     #### PAYS Business Model ####
     upfront_payment = a['loan_upfront_adjustment'] * total_capital_cost # (int) upfront payment for panels
@@ -232,9 +235,12 @@ def objective_function_PAYS(x,a):
     battery_capacity = x[1]
     
     # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']    # (int) capital cost of PV system 
-    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent']   # (int) capital cost of battery
-    total_capital_cost = pv_capital_cost + battery_capital_cost
+    # pv_capital_cost = economic_analysis.calculate_pv_capital_cost(pv_capacity,a)
+    # battery_capital_cost = economic_analysis.calculate_battery_capital_cost(battery_capacity,a)
+    
+    # pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']    # (int) capital cost of PV system 
+    # battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent']   # (int) capital cost of battery
+    total_capital_cost = economic_analysis.calculate_capital_investment(pv_capacity, battery_capacity, a)
     
     #### PAYS Business Model ####
     upfront_payment = a['PAYS_capital_cost_adjustment'] * total_capital_cost # (int) upfront payment for panels
@@ -281,10 +287,9 @@ def objective_function_PAYS(x,a):
     # Energy  
     energy_savings_per_year = energy_cost_without_pv.sum() - energy_cost_with_pv.sum() # (float) revenue per year from energy savings 
     
-    
     # Operational
     operational_savings_per_year = value_of_charging_saved_by_pv_from_loadshedding.sum() # (float) revenue per year from saved passengers
-    
+    #operational_savings_per_year = 0
     # Total 
     #cash_flows = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year for i in range(a['Rproj'])]
 
@@ -317,8 +322,16 @@ def objective_function_PAYS(x,a):
 #     # Find all hours with loadshedding where the net load is positive (i.e. where solar + battery do not provide complete coverage of loadshedding)
 #     not_covered = [net_load_profile[i] for i, is_shedding in enumerate(loadshedding_schedule) if is_shedding and net_load_profile[i] > 0]
 
-#     return sum(not_covered) # return the number of hours that are not covered by solar + battery
+#     return sum(not_covered) # return the number of hours that are not covered by solar + batter
 
+
+def cover_loadshedding_v2(num_vehicles, vehicle_battery_size):
+    '''
+    Find the maximum energy capacity of the fleet of vehicles
+    '''
+    fleet_energy_capacity = num_vehicles * vehicle_battery_size
+    
+    return fleet_energy_capacity
 
 def plot_sensitivities(sensitivity_var, vals, bounds, initial_guess, a, objective_function):
     
@@ -386,3 +399,9 @@ def plot_sensitivities(sensitivity_var, vals, bounds, initial_guess, a, objectiv
     plt.show()
     
     return npvs, optimal_battery_capacities, optimal_pv_capacities, pv_capital_costs, battery_capital_costs, total_capital_costs
+
+
+def max_number_vehicles():
+    
+    
+    return -num_vehicles
