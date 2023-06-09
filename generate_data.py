@@ -166,10 +166,11 @@ def simulate_battery_storage(load_profile, pv_output_profile,
     # Useful 
     battery_energy_draw_from_pv_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
     load_energy_received_from_battery_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
-    
+    load_profile = list(load_profile)
+    net_load_profile = [load - pv for load,pv in zip(load_profile ,pv_output_profile)] # Calculate the net load profile
 
-    for hour, load in enumerate(load_profile):
-        net_load = load - pv_output_profile[hour]  # Calculate the net load profile
+    for hour, net_load in enumerate(net_load_profile): 
+        #net_load = load - pv_output_profile[hour]  # Calculate the net load profile
         
         battery_room = battery_capacity - battery_state # Calculate the amount of room left in the battery
         
