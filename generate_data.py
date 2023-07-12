@@ -20,7 +20,8 @@ def get_user_input():
 def simulate_charging_load_profile(total_days, total_time,
                              time_resolution,
                              num_vehicles,
-                             charging_power):
+                             charging_power,
+                             plot = True):
     '''
     This function simulates a charging load profile for a fleet of EVs at a charging station, given the number of EVs, the charging power, the total simulation time, and the desired time resolution
     
@@ -38,8 +39,8 @@ def simulate_charging_load_profile(total_days, total_time,
     load_profile = np.zeros_like(time)
 
     # Calculate the EV load profile for each day
-    for day in range(total_days):
-        for i in range(num_vehicles):
+    for i in range(num_vehicles):
+        for day in range(total_days):
             start_time = start_times[i, day]
             duration = durations[i, day]
             end_time = start_time + duration
@@ -47,14 +48,14 @@ def simulate_charging_load_profile(total_days, total_time,
             # Calculate the charging load during the charging period
             mask = (time >= start_time) & (time < end_time)
             load_profile[mask] += charging_power
-
-    # Plot the EV load profile
-    plt.plot(time, load_profile)
-    plt.xlabel('Time (hours)')
-    plt.ylabel('Power (kW)')
-    plt.title('Electric Vehicle Load Profile')
-    plt.grid(True)
-    plt.show()
+    if plot: 
+        # Plot the EV load profile
+        plt.plot(time, load_profile)
+        plt.xlabel('Time (hours)')
+        plt.ylabel('Power (kW)')
+        plt.title('Electric Vehicle Load Profile')
+        plt.grid(True)
+        plt.show()
     
     return load_profile 
 
@@ -133,12 +134,15 @@ def simulate_insolation_profile(latitude, longitude, time_resolution, timezone):
 
 ########### PV Output ########### 
 
-def get_pv_output(insolation_profile, pv_efficiency, pv_capacity):
+def get_pv_output(capacity_factor, insolation_profile, pv_efficiency, renewables_ninja, pv_capacity):
     '''
     This function obtains the solar PV output profile given a solar insolation profile, PV efficiency, and PV capacity. The function returns the PV output profile.'''
-
-    # Calculate daily PV output profile
-    pv_output_profile = [pv_capacity * pv_efficiency * i / 1000 for i in insolation_profile]
+    if renewables_ninja:
+        pv_output_profile = [pv_capacity * cf  for cf in capacity_factor]
+        
+    else:
+        # Calculate daily PV output profile
+        pv_output_profile = [pv_capacity * pv_efficiency * insolation / 1000 for insolation in insolation_profile]
 
     
     return pv_output_profile

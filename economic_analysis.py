@@ -14,16 +14,23 @@ def calculate_npv(initial_investment, cash_flows, discount_rate):
     return npv
 
 
-def calculate_npv_with_loan(initial_investment, residual_cost_of_panels_owed, loan_payback_period, 
+def calculate_npv_with_loan(initial_investment, residual_cost_of_panels_owed,  
                             energy_savings_per_year,
                             operational_savings_per_year,
                            carbon_savings_per_year,
-                           discount_rate, Rproj):
+                           a):
+    
+    loan_payback_period = a['loan_payback_period']
+    discount_rate = a['discount_rate']
+    Rproj = a['Rproj']
+    pv_annual_maintenance_cost = a['pv_annual_maintenance_cost']
+    
+    
     # Payback 
     payments = residual_cost_of_panels_owed / loan_payback_period
     
     # Revenues TODO: In future versions these will need to be calculated separately for each period, for now assume constant in all periods
-    revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year for i in range(Rproj)]
+    revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - pv_annual_maintenance_cost  for year in range(Rproj)]
     
     costs = np.zeros(len(revenues))
     # Fill the first num_periods elements of costs with PAYS_payback_per_period
@@ -41,16 +48,21 @@ def calculate_npv_with_loan(initial_investment, residual_cost_of_panels_owed, lo
     return npv 
 
 
-def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed, PAYS_cut_of_savings, 
+def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed,  
                             energy_savings_per_year,
                             operational_savings_per_year,
                            carbon_savings_per_year,
-                           discount_rate, Rproj):
+                           a):
+    PAYS_cut_of_savings = a['PAYS_cut_of_savings']
+    discount_rate = a['discount_rate']
+    Rproj = a['Rproj']
+    pv_annual_maintenance_cost = a['pv_annual_maintenance_cost']
+    
     # Payback
     PAYS_payback_per_period = energy_savings_per_year * PAYS_cut_of_savings
     
     # Revenues TODO: In future versions these will need to be calculated separately for each period, for now assume constant in all periods
-    revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year for i in range(Rproj)]
+    revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - pv_annual_maintenance_cost for year in range(Rproj)]
     
     # Costs
     payback_per_period = max(PAYS_payback_per_period, residual_cost_of_panels_owed/Rproj)
@@ -88,8 +100,8 @@ def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed, PA
 
 def calculate_capital_investment(pv_capacity, battery_capacity, a):
     # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']     # (int) capital cost of PV system 
-    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent'] # (int) capital cost of battery
+    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity #** a['pv_cost_exponent']     # (int) capital cost of PV system 
+    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity #** a['battery_cost_exponent'] # (int) capital cost of battery
     total_capital_cost = pv_capital_cost + battery_capital_cost
     
     return total_capital_cost
