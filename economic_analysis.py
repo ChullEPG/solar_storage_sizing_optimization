@@ -3,14 +3,14 @@ import numpy as np
 
 ########### NPV ########### 
 
-def calculate_npv(initial_investment, cash_flows, discount_rate):
+def calculate_npv(initial_investment, cash_flows, discount_rate, residual_value):
     values = []
     for idx, cash_flow in enumerate(cash_flows):
         this_year_value = cash_flow /(1 + discount_rate)**idx
         values.append(this_year_value)
     total_benefits = sum(values)
     total_costs = initial_investment
-    npv = total_benefits - total_costs
+    npv = total_benefits - total_costs + residual_value
     return npv
 
 
