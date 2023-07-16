@@ -20,15 +20,18 @@ def objective_function(x, a):
     battery_capacity = x[1]
     
     # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity ** a['pv_cost_exponent']  # (int) capital cost of PV system 
-    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity ** a['battery_cost_exponent']  # (int) capital cost of battery
+    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity   # (int) capital cost of PV system 
+    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
     total_capital_cost = pv_capital_cost + battery_capital_cost
+    
+    # Residual value
+    residual_value = a['residual_value_factor'] * total_capital_cost
     
     # Generate PV Output profile 
     pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], a['annual_insolation_profile'], a['pv_efficiency'], a['renewables_ninja'], pv_capacity) 
     
     # Generate load shedding schedule 
-    loadshedding_schedule = generate_data.generate_loadshedding_schedule(a['loadshedding_probability'])
+    loadshedding_schedule = generate_data.generate_loadshedding_schedule(pv_output_profile,a['loadshedding_probability'])
     
     # Generate PV output profile with battery
     pv_with_battery_output_profile = generate_data.simulate_battery_storage(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
@@ -83,7 +86,7 @@ def objective_function(x, a):
     cash_flows = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - a['pv_annual_maintenance_cost'] for year in range(a['Rproj'])]
 
     ##### Calculate NPV #####
-    npv = economic_analysis.calculate_npv(total_capital_cost, cash_flows, a['discount_rate'])
+    npv = economic_analysis.calculate_npv(total_capital_cost, cash_flows, a['discount_rate'], residual_value)
     
     return -npv 
 
@@ -345,6 +348,171 @@ def objective_function_PAYS(x,a):
     
     return -npv 
 
+def objective_function_with_solar_degradation(x, a):
+    
+    # Decision variables - PV capacity and Battery capacity 
+    pv_capacity = x[0]
+    battery_capacity = x[1]
+    
+    # Capital Cost of Investment 
+    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity   # (int) capital cost of PV system 
+    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
+    total_capital_cost = pv_capital_cost + battery_capital_cost
+    
+    # Residual value
+    residual_value = a['residual_value_factor'] * total_capital_cost
+    
+    # Generate PV Output profile 
+    pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], a['annual_insolation_profile'], a['pv_efficiency'], a['renewables_ninja'], pv_capacity) 
+    
+    # Generate load shedding schedule 
+    loadshedding_schedule = generate_data.generate_loadshedding_schedule(pv_output_profile, a['loadshedding_probability'])
+    
+    # Generate PV output profile with battery
+    pv_with_battery_output_profile = generate_data.simulate_battery_storage(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
+                                                                            a['battery_charging_efficiency'], a['battery_discharging_efficiency'])
+    # Net charging load profile 
+    net_load_profile = a['load_profile'] - pv_with_battery_output_profile
+
+    # Profile of kWh that would be lost to load shedding WITHOUT  solar and battery 
+    gross_load_affected_by_loadshedding = np.array([a['load_profile'][i] if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
+    
+    # Profile of kWh that would have been lost to loadshedding but are saved by the solar + battery generation [these are beneficial, and not to be charged $$ for]
+    saved_free_kWh = [min(pv_with_battery_output_profile[i], gross_load_affected_by_loadshedding[i]) if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)]
+    
+    # Profile of kWh that would be lost to load shedding WITH solar and battery
+    net_load_affected_by_loadshedding = np.array([net_load_profile[i] if is_shedding and net_load_profile[i] > 0 else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
+    
+    # Find the load profiles that are net of load shedding - this is the load you neeed to charge $ for [in reality you will need an entirely new schedule] 
+    gross_load_minus_loadshedding = a['load_profile'] - gross_load_affected_by_loadshedding
+    net_load_minus_loadshedding = net_load_profile - net_load_affected_by_loadshedding 
+    
+
+    if a['load_shedding_bool']:
+            # Value of kWh saved from loadshedding BY solar + battery!  [makes above not needed?]
+        value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding(saved_free_kWh, a['cost_per_passenger'],
+                                                                                         a['time_passenger_per_kWh'], a['time_periods'])
+        # Energy costs ($ for kWh charged) (net of load shedding - so this is actually cheaper than without loadshedding, but we account for the value of missed trips elsewhere)
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(gross_load_minus_loadshedding, net_load_minus_loadshedding,
+                            a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
+    else:
+        
+        value_of_charging_saved_by_pv_from_loadshedding = np.ndarray(0)
+        
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(a['load_profile'], net_load_profile,
+                            a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
+        
+    ##### Monetary savings (revenue) from solar + battery #######
+    
+    # Carbon
+    if a['carbon_price_bool']:
+        carbon_savings_per_year = economic_analysis.get_value_of_carbon_offsets(gross_load_minus_loadshedding, net_load_minus_loadshedding, a['grid_carbon_intensity'], a['carbon_price'])
+    else:
+        carbon_savings_per_year = 0
+        
+    # Enegy  
+    energy_savings_per_year = energy_cost_without_pv.sum() - energy_cost_with_pv.sum() # (float) revenue per year from energy savings 
+    
+    # Operational
+    operational_savings_per_year = value_of_charging_saved_by_pv_from_loadshedding.sum() # (float) revenue per year from saved passengers
+    #operational_savings_per_year = 0
+    
+    # Total 
+    cash_flows = [(energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - a['pv_annual_maintenance_cost']) * (1 - a['solar_annual_degradation']*year) for year in range(a['Rproj'])]
+
+    ##### Calculate NPV #####
+    npv = economic_analysis.calculate_npv(total_capital_cost, cash_flows, a['discount_rate'], residual_value)
+    
+    return -npv 
+
+def objective_function_with_solar_and_battery_degradation(x, a):
+    
+    # Decision variables - PV capacity and Battery capacity 
+    pv_capacity = x[0]
+    battery_capacity = x[1]
+    
+    # Capital Cost of Investment 
+    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity   # (int) capital cost of PV system 
+    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
+    total_capital_cost = pv_capital_cost + battery_capital_cost
+    
+    # Residual value
+    residual_value = a['residual_value_factor'] * total_capital_cost
+    
+    # Generate PV Output profile 
+    #pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], a['annual_insolation_profile'], a['pv_efficiency'], a['renewables_ninja'], pv_capacity) 
+    
+    cash_flows = []
+    
+    # Generate PV output profile with battery 
+    # IN EACH YEAR
+    for year in range(a['Rproj']):
+        # Generate PV Output profile 
+        pv_capacity = pv_capacity * (1 - a['solar_annual_degradation'] * year) # degrade PV capacity by solar degradation rate
+        pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], a['annual_insolation_profile'], a['pv_efficiency'], a['renewables_ninja'], pv_capacity)
+        
+        # Generate battery profile 
+        battery_capacity = battery_capacity * (1 - a['battery_annual_degradation'] * year) # degrade battery capacity by battery degradation rate
+        pv_with_battery_output_profile = generate_data.simulate_battery_storage(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
+                                                                            a['battery_charging_efficiency'], a['battery_discharging_efficiency'])
+        
+         # Generate load shedding schedule 
+        loadshedding_schedule = generate_data.generate_loadshedding_schedule(pv_output_profile, a['loadshedding_probability'])
+        # Net charging load profile 
+        net_load_profile = a['load_profile'] - pv_with_battery_output_profile
+
+        # Profile of kWh that would be lost to load shedding WITHOUT  solar and battery 
+        gross_load_affected_by_loadshedding = np.array([a['load_profile'][i] if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
+        
+        # Profile of kWh that would have been lost to loadshedding but are saved by the solar + battery generation [these are beneficial, and not to be charged $$ for]
+        saved_free_kWh = [min(pv_with_battery_output_profile[i], gross_load_affected_by_loadshedding[i]) if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)]
+        
+        # Profile of kWh that would be lost to load shedding WITH solar and battery
+        net_load_affected_by_loadshedding = np.array([net_load_profile[i] if is_shedding and net_load_profile[i] > 0 else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
+        
+        # Find the load profiles that are net of load shedding - this is the load you neeed to charge $ for [in reality you will need an entirely new schedule] 
+        gross_load_minus_loadshedding = a['load_profile'] - gross_load_affected_by_loadshedding
+        net_load_minus_loadshedding = net_load_profile - net_load_affected_by_loadshedding 
+        
+
+        if a['load_shedding_bool']:
+                # Value of kWh saved from loadshedding BY solar + battery!  [makes above not needed?]
+            value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding(saved_free_kWh, a['cost_per_passenger'],
+                                                                                            a['time_passenger_per_kWh'], a['time_periods'])
+            # Energy costs ($ for kWh charged) (net of load shedding - so this is actually cheaper than without loadshedding, but we account for the value of missed trips elsewhere)
+            energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(gross_load_minus_loadshedding, net_load_minus_loadshedding,
+                                a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
+        else:
+            
+            value_of_charging_saved_by_pv_from_loadshedding = np.ndarray(0)
+            
+            energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(a['load_profile'], net_load_profile,
+                                a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
+        
+        ##### Monetary savings (revenue) from solar + battery #######
+        
+        # Carbon
+        if a['carbon_price_bool']:
+            carbon_savings_per_year = economic_analysis.get_value_of_carbon_offsets(gross_load_minus_loadshedding, net_load_minus_loadshedding, a['grid_carbon_intensity'], a['carbon_price'])
+        else:
+            carbon_savings_per_year = 0
+            
+        # Enegy  
+        energy_savings_per_year = energy_cost_without_pv.sum() - energy_cost_with_pv.sum() # (float) revenue per year from energy savings 
+        
+        # Operational
+        operational_savings_per_year = value_of_charging_saved_by_pv_from_loadshedding.sum() # (float) revenue per year from saved passengers
+        #operational_savings_per_year = 0
+        
+        cash_flows.append(energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - a['pv_annual_maintenance_cost'])
+    
+    # Total 
+    #cash_flows = [(energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - a['pv_annual_maintenance_cost']) * (1 - a['solar_annual_degradation']*year) for year in range(a['Rproj'])]
+
+    ##### Calculate NPV #####
+    npv = economic_analysis.calculate_npv(total_capital_cost, cash_flows, a['discount_rate'], residual_value)
+    
+    return -npv 
 
 
 def objective_function_PAYS_PSO(x,a):

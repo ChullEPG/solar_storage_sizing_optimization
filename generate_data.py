@@ -147,6 +147,29 @@ def get_pv_output(capacity_factor, insolation_profile, pv_efficiency, renewables
     
     return pv_output_profile
 
+
+def get_pv_output_over_project_lifetime(capacity_factor, insolation_profile, pv_efficiency, renewables_ninja, pv_capacity, a):
+    '''
+    This functiopvn obtains the solar PV output profile given a solar insolation profile, PV efficiency, and PV capacity. The function returns the PV output profile.
+    '''
+    pv_output_profile = []
+    
+    if renewables_ninja:
+        for year in range(a['Rproj']):
+            pv_capacity = pv_capacity * (1 - a['solar_annual_degradation'])**year 
+            this_year_pv_output_profile = [pv_capacity * cf  for cf in capacity_factor]
+            pv_output_profile.append(this_year_pv_output_profile)
+    else:
+        # Calculate daily PV output profile
+        for year in range(a['Rproj']):
+            pv_capacity = pv_capacity * (1 - a['solar_annual_degradation'])**year 
+            this_year_pv_output_profile = [pv_capacity * pv_efficiency * insolation / 1000 for insolation in insolation_profile]
+            pv_output_profile.append(this_year_pv_output_profile)
+    # flatten list
+    pv_output_profile = [item for sublist in pv_output_profile for item in sublist]
+    
+    return pv_output_profile
+
 # PV Output with battery storage
 def simulate_battery_storage(load_profile, pv_output_profile, 
                              battery_capacity, battery_duration,
@@ -238,18 +261,18 @@ def simulate_battery_storage(load_profile, pv_output_profile,
 
 ########### Loadshedding ########### 
 
-def generate_loadshedding_schedule(loadshedding_probability, set_random_seed = True):
+def generate_loadshedding_schedule(pv_output_profile, loadshedding_probability, set_random_seed = True):
     ''' 
     Generates loadshedding schedulef from average annual loadshedding probability [requires 1 value]
     '''
     schedule = []
-    hours_in_year = 365 * 24  # Assuming a non-leap year
+    hours_in_project_lifetime = len(pv_output_profile) # Calculate the number of hours of the project lifetime
     
     #set random seed
     if set_random_seed:
         random.seed(0)
     
-    for _ in range(hours_in_year):
+    for _ in range(hours_in_project_lifetime):
         # Generate a random value between 0 and 1
         random_value = random.random()
         
