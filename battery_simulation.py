@@ -34,7 +34,8 @@ class Battery(object):
     
 def schedule_battery_usage(load_profile, pv_output_profile, 
                              battery_capacity, battery_duration,
-                             charging_efficiency, discharging_efficiency):
+                             charging_efficiency, discharging_efficiency,
+                             buyPrice, sellPrice):
     
 
     batt = Battery(current_charge=0.0,
@@ -44,7 +45,8 @@ def schedule_battery_usage(load_profile, pv_output_profile,
                    charging_power_limit = battery_capacity/battery_duration,
                    discharging_power_limit = -battery_capacity/battery_duration)
                    
-    net_load_profile = [load - pv for load,pv in zip(load_profile ,pv_output_profile)] # Calculate the net load profile
+    # Calculate net load profile and get positive and negative load arrays 
+    net_load_profile = [load - pv for load,pv in zip(load_profile ,pv_output_profile)] 
     
     # split load into +ve and -ve
     posLoad = np.copy(net_load_profile)
@@ -56,6 +58,13 @@ def schedule_battery_usage(load_profile, pv_output_profile,
             posLoad[j]=0
     posLoadDict = dict(enumerate(posLoad))
     negLoadDict = dict(enumerate(negLoad))
+    
+    
+    ## Get buy and sell price dicts
+    priceDict1 = dict(enumerate(sellPrice))
+    priceDict2 = dict(enumerate(buyPrice))
+    
+    
 
     # now set up the pyomo model
     m = en.ConcreteModel()
@@ -198,4 +207,6 @@ def schedule_battery_usage(load_profile, pv_output_profile,
         if j>=9:
             break
         
-    return outputVars 
+    newNetLoad = outputVars[7]+outputVars[8]
+    
+    return newNetLoad 
