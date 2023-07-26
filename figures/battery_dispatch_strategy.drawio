@@ -1,9 +1,12 @@
-<mxfile host="app.diagrams.net" modified="2023-07-26T12:30:20.025Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5.2 Safari/605.1.15" etag="_rCgurPOa_PEQqEKRhvN" version="21.6.5" type="github">
+<mxfile host="app.diagrams.net" modified="2023-07-26T12:31:32.820Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5.2 Safari/605.1.15" etag="8qwgCC-ruMn65YZgyj7p" version="21.6.5" type="github">
   <diagram name="Page-1" id="HNknkX7AArUWihxTNY1w">
     <mxGraphModel dx="2261" dy="832" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="none" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="X4KO-zRkeWrqwRvj3RQm-7" value="" style="rounded=1;whiteSpace=wrap;html=1;labelBackgroundColor=none;dashed=1;dashPattern=1 1;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="150" y="10" width="540" height="130" as="geometry" />
+        </mxCell>
         <mxCell id="2dAe46BwtuLTPcBG57BH-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontStyle=2;labelBackgroundColor=none;fontColor=default;strokeWidth=10;" parent="1" source="2dAe46BwtuLTPcBG57BH-7" target="2dAe46BwtuLTPcBG57BH-9" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -113,7 +116,7 @@
           <mxGeometry x="700" y="720" as="geometry" />
         </mxCell>
         <mxCell id="yjgdQEFUr55mVdJYSKla-15" value="Negative net load?" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontSize=20;" parent="1" vertex="1">
-          <mxGeometry x="315" y="170" width="210" height="30" as="geometry" />
+          <mxGeometry x="320" y="410" width="210" height="30" as="geometry" />
         </mxCell>
         <mxCell id="yjgdQEFUr55mVdJYSKla-17" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=20;labelBackgroundColor=default;" parent="1" vertex="1" connectable="0">
           <mxGeometry x="20" y="590" as="geometry">
@@ -145,6 +148,21 @@
           <mxGeometry x="850" y="310" as="geometry">
             <mxPoint x="-860" y="-10" as="offset" />
           </mxGeometry>
+        </mxCell>
+        <mxCell id="X4KO-zRkeWrqwRvj3RQm-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="X4KO-zRkeWrqwRvj3RQm-4" target="2dAe46BwtuLTPcBG57BH-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="X4KO-zRkeWrqwRvj3RQm-4" value="Solar PV" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="170" y="20" width="150" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="X4KO-zRkeWrqwRvj3RQm-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="X4KO-zRkeWrqwRvj3RQm-5" target="2dAe46BwtuLTPcBG57BH-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="X4KO-zRkeWrqwRvj3RQm-5" value="EV Charging Load" style="ellipse;whiteSpace=wrap;html=1;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="520" y="20" width="150" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="X4KO-zRkeWrqwRvj3RQm-6" value="Input Data" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="315" y="10" width="210" height="30" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
