@@ -75,7 +75,7 @@ def objective_function(x, a):
     else:
         carbon_savings_per_year = 0
         
-    # Enegy  
+    # Energy  
     energy_savings_per_year = energy_cost_without_pv.sum() - energy_cost_with_pv.sum() # (float) revenue per year from energy savings 
     
     # Operational
@@ -191,7 +191,7 @@ def objective_function_for_loan(x, a):
     pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], a['annual_insolation_profile'], a['pv_efficiency'], a['renewables_ninja'], pv_capacity) 
     
     # Generate load shedding schedule 
-    loadshedding_schedule = generate_data.generate_loadshedding_schedule(a['loadshedding_probability'])
+    loadshedding_schedule = generate_data.generate_loadshedding_schedule(pv_output_profile, a['loadshedding_probability'])
     
     # Generate PV output profile with battery
     pv_with_battery_output_profile = generate_data.simulate_battery_storage(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
