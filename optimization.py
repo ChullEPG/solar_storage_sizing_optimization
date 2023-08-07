@@ -18,7 +18,6 @@ def objective_function(x, a):
     pv_capital_cost = economic_analysis.calculate_pv_capital_cost(pv_capacity,a)
     #pv_capital_cost = a['pv_cost_per_kw'] * pv_capacity   # (int) capital cost of PV system 
     battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
-    
     total_capital_cost = pv_capital_cost + battery_capital_cost
     
     # Residual value
@@ -67,7 +66,7 @@ def objective_function(x, a):
         
         
     # Annual Maintenance costs
-    annual_maintenance_costs = a['battery_annual_maintenance_cost'] + a['solar_annual_maintenance_cost']
+    annual_maintenance_costs = a['battery_annual_maintenance_cost'] + a['pv_annual_maintenance_cost']
         
     ##### Monetary savings (revenue) from solar + battery #######
     
@@ -436,12 +435,18 @@ def objective_function_with_solar_and_battery_degradation(x, a):
     battery_capacity = x[1]
     
     # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity   # (int) capital cost of PV system 
+    pv_capital_cost = economic_analysis.calculate_pv_capital_cost(pv_capacity,a)
+    #pv_capital_cost = a['pv_cost_per_kw'] * pv_capacity   # (int) capital cost of PV system 
     battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
     total_capital_cost = pv_capital_cost + battery_capital_cost
     
     # Residual value
-    residual_value = a['residual_value_factor'] * total_capital_cost
+    pv_residual_value = a['solar_residual_value_factor'] * pv_capital_cost
+    battery_residual_value = a['battery_residual_value_factor'] * battery_capital_cost
+    
+    
+    maintenance_costs = a['pv_annual_maintenance_cost'] + a['battery_annual_maintenance_cost']
+    
     
     # Generate PV Output profile 
     #pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], a['annual_insolation_profile'], a['pv_efficiency'], a['renewables_ninja'], pv_capacity) 
@@ -508,13 +513,13 @@ def objective_function_with_solar_and_battery_degradation(x, a):
         operational_savings_per_year = value_of_charging_saved_by_pv_from_loadshedding.sum() # (float) revenue per year from saved passengers
         #operational_savings_per_year = 0
         
-        cash_flows.append(energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - a['pv_annual_maintenance_cost'])
+        cash_flows.append(energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - maintenance_costs)
     
     # Total 
     #cash_flows = [(energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - a['pv_annual_maintenance_cost']) * (1 - a['solar_annual_degradation']*year) for year in range(a['Rproj'])]
 
     ##### Calculate NPV #####
-    npv = economic_analysis.calculate_npv(total_capital_cost, cash_flows, a['discount_rate'], residual_value)
+    npv = economic_analysis.calculate_npv(total_capital_cost, cash_flows, a['discount_rate'], pv_residual_value, battery_residual_value)
     
     return -npv 
 
