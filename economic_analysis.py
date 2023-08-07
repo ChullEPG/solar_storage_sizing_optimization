@@ -199,7 +199,7 @@ def get_cost_of_charging_v1(load_profile: np.ndarray, net_load_profile: np.ndarr
 
 
 ########## Cost of charging v2 (with peak,standard,off peak) #######
-def get_cost_of_charging_v1(load_profile: np.ndarray, net_load_profile: np.ndarray,
+def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarray,
                          time_of_use_tariffs: dict, time_periods: dict,
                          feed_in_tariff: int,
                          feed_in_tariff_bool: bool):
@@ -221,12 +221,13 @@ def get_cost_of_charging_v1(load_profile: np.ndarray, net_load_profile: np.ndarr
     # Calculate total cost of energy with and without PV
 
     for i in range(len(total_cost_no_pv)):
+        
+        curr_hour_of_week = i % 168 
         curr_hour_of_day = i % 24
         
-    
-        if curr_hour_of_day in peak_hours:
+        if curr_hour_of_week > 120: # weekend (all off-epak)
             # Without PV
-            total_cost_no_pv[i] = load_profile[i] * peak_cost 
+            total_cost_no_pv[i] = load_profile[i] * off_peak_cost 
             # With PV
             if net_load_profile[i] < 0: # PV output is greater than EV load
                 
@@ -235,9 +236,22 @@ def get_cost_of_charging_v1(load_profile: np.ndarray, net_load_profile: np.ndarr
                 else:
                     total_cost_with_pv[i] = 0 # otherwise, energy is simply curtailed and there is no cost
             else:
+                total_cost_with_pv[i] = net_load_profile[i] * off_peak_cost
+            
+        elif curr_hour_of_day in peak_hours: #peak 
+            
+            total_cost_no_pv[i] = load_profile[i] * peak_cost 
+            
+            if net_load_profile[i] < 0: 
+                
+                if feed_in_tariff_bool: 
+                    total_cost_with_pv[i] = net_load_profile[i] * feed_in_tariff 
+                else:
+                    total_cost_with_pv[i] = 0 
+            else:
                 total_cost_with_pv[i] = net_load_profile[i] * peak_cost
             
-        elif curr_hour_of_day in standard_hours:
+        elif curr_hour_of_day in standard_hours: #standard 
             
             total_cost_no_pv[i] = load_profile[i] * standard_cost
             
@@ -249,7 +263,7 @@ def get_cost_of_charging_v1(load_profile: np.ndarray, net_load_profile: np.ndarr
             else:
                 total_cost_with_pv[i] = net_load_profile[i] * standard_cost
                 
-        else curr_hour_of_day in off_peak_hours:
+        else # off peak 
             
             total_cost_no_pv[i] = load_profile[i] * off_peak_cost
             
