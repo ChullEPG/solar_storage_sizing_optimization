@@ -7,11 +7,6 @@ import generate_data
 import matplotlib.pyplot as plt
 
 
-##### CUYRRENT ISSUE IS WHEN I AM RUNNING OPTIMIZATION.PY VS THE DIRECT OPTIMIZATION IN FEASIBLITY ANALYSIS I GET DIFF ANSWERS 
-### PROCESS TO FIX: REDUCE OBJECTIVE FUNCTION TO MOST BASIC FORM AND THEN BUILD UP TO SEE WHERE ERORR OCCURS
-### ALSO THE MODULES DON'T SEEM TO BE IMOPRTING CORRECTLY (ESPECIALLY TO FEASIBLITY.IPYNB)
-
-
 
 def objective_function(x, a):
     
@@ -20,12 +15,15 @@ def objective_function(x, a):
     battery_capacity = x[1]
     
     # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity   # (int) capital cost of PV system 
+    pv_capital_cost = economic_analysis.calculate_pv_capital_cost(pv_capacity,a)
+    #pv_capital_cost = a['pv_cost_per_kw'] * pv_capacity   # (int) capital cost of PV system 
     battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity  # (int) capital cost of battery
+    
     total_capital_cost = pv_capital_cost + battery_capital_cost
     
     # Residual value
-    residual_value = a['residual_value_factor'] * total_capital_cost
+    pv_residual_value = a['solar_residual_value_factor'] * pv_capital_cost
+    battery_residual_value = a['battery_residual_value_factor'] * battery_capital_cost
     
     # Generate PV Output profile 
     pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], a['annual_insolation_profile'], a['pv_efficiency'], a['renewables_ninja'], pv_capacity) 
@@ -58,14 +56,18 @@ def objective_function(x, a):
         value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding(saved_free_kWh, a['cost_per_passenger'],
                                                                                          a['time_passenger_per_kWh'], a['time_periods'])
         # Energy costs ($ for kWh charged) (net of load shedding - so this is actually cheaper than without loadshedding, but we account for the value of missed trips elsewhere)
-        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(gross_load_minus_loadshedding, net_load_minus_loadshedding,
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(gross_load_minus_loadshedding, net_load_minus_loadshedding,
                             a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
     else:
         
         value_of_charging_saved_by_pv_from_loadshedding = np.ndarray(0)
         
-        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(a['load_profile'], net_load_profile,
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(a['load_profile'], net_load_profile,
                             a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
+        
+        
+    # Annual Maintenance costs
+    annual_maintenance_costs = a['battery_annual_maintenance_cost'] + a['solar_annual_maintenance_cost']
         
     ##### Monetary savings (revenue) from solar + battery #######
     
@@ -82,11 +84,13 @@ def objective_function(x, a):
     operational_savings_per_year = value_of_charging_saved_by_pv_from_loadshedding.sum() # (float) revenue per year from saved passengers
     #operational_savings_per_year = 0
     
+    
+    
     # Total 
-    cash_flows = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - a['pv_annual_maintenance_cost'] for year in range(a['Rproj'])]
+    cash_flows = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - annual_maintenance_costs  for year in range(a['Rproj'])]
 
     ##### Calculate NPV #####
-    npv = economic_analysis.calculate_npv(total_capital_cost, cash_flows, a['discount_rate'], residual_value)
+    npv = economic_analysis.calculate_npv(total_capital_cost, cash_flows, a['discount_rate'], pv_residual_value, battery_residual_value)
     
     return -npv 
 
@@ -137,7 +141,7 @@ def objective_function_with_loadshedding_penalty(x, a):
                                                                                          a['time_passenger_per_kWh'], a['time_periods'])
 
     # Energy costs ($ for kWh charged) (net of load shedding - so this is actually cheaper than without loadshedding, but we account for the value of missed trips elsewhere)
-    energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(gross_load_minus_loadshedding, net_load_minus_loadshedding,
+    energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(gross_load_minus_loadshedding, net_load_minus_loadshedding,
                          a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
     
     ##### Monetary savings (revenue) from solar + battery #######
@@ -217,14 +221,14 @@ def objective_function_for_loan(x, a):
         value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding(saved_free_kWh, a['cost_per_passenger'],
                                                                                          a['time_passenger_per_kWh'], a['time_periods'])
         # Energy costs ($ for kWh charged) (net of load shedding - so this is actually cheaper than without loadshedding, but we account for the value of missed trips elsewhere)
-        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(gross_load_minus_loadshedding, net_load_minus_loadshedding,
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(gross_load_minus_loadshedding, net_load_minus_loadshedding,
                             a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
         
     else:
         
         value_of_charging_saved_by_pv_from_loadshedding = np.ndarray(0)
         
-        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(a['load_profile'], net_load_profile,
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(a['load_profile'], net_load_profile,
                             a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
         
         
@@ -313,14 +317,14 @@ def objective_function_PAYS(x,a):
         value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding(saved_free_kWh, a['cost_per_passenger'],
                                                                                             a['time_passenger_per_kWh'], a['time_periods'])
         # Energy costs ($ for kWh charged) (net of load shedding - so this is actually cheaper than without loadshedding, but we account for the value of missed trips elsewhere)
-        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(gross_load_minus_loadshedding, net_load_minus_loadshedding,
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(gross_load_minus_loadshedding, net_load_minus_loadshedding,
                             a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
         
     else:
     
         value_of_charging_saved_by_pv_from_loadshedding = np.ndarray(0)
         
-        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(a['load_profile'], net_load_profile,
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(a['load_profile'], net_load_profile,
                             a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
         
     ##### Monetary savings (revenue) from solar + battery #######
@@ -393,13 +397,13 @@ def objective_function_with_solar_degradation(x, a):
         value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding(saved_free_kWh, a['cost_per_passenger'],
                                                                                          a['time_passenger_per_kWh'], a['time_periods'])
         # Energy costs ($ for kWh charged) (net of load shedding - so this is actually cheaper than without loadshedding, but we account for the value of missed trips elsewhere)
-        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(gross_load_minus_loadshedding, net_load_minus_loadshedding,
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(gross_load_minus_loadshedding, net_load_minus_loadshedding,
                             a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
     else:
         
         value_of_charging_saved_by_pv_from_loadshedding = np.ndarray(0)
         
-        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(a['load_profile'], net_load_profile,
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(a['load_profile'], net_load_profile,
                             a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
         
     ##### Monetary savings (revenue) from solar + battery #######
@@ -480,13 +484,13 @@ def objective_function_with_solar_and_battery_degradation(x, a):
             value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding(saved_free_kWh, a['cost_per_passenger'],
                                                                                             a['time_passenger_per_kWh'], a['time_periods'])
             # Energy costs ($ for kWh charged) (net of load shedding - so this is actually cheaper than without loadshedding, but we account for the value of missed trips elsewhere)
-            energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(gross_load_minus_loadshedding, net_load_minus_loadshedding,
+            energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(gross_load_minus_loadshedding, net_load_minus_loadshedding,
                                 a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
         else:
             
             value_of_charging_saved_by_pv_from_loadshedding = np.ndarray(0)
             
-            energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(a['load_profile'], net_load_profile,
+            energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(a['load_profile'], net_load_profile,
                                 a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
         
         ##### Monetary savings (revenue) from solar + battery #######
@@ -566,7 +570,7 @@ def objective_function_PAYS_PSO(x,a):
                                                                                             a['time_passenger_per_kWh'], a['time_periods'])
 
         # Energy costs ($ for kWh charged) (net of load shedding - so this is actually cheaper than without loadshedding, but we account for the value of missed trips elsewhere)
-        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging(gross_load_minus_loadshedding, net_load_minus_loadshedding,
+        energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(gross_load_minus_loadshedding, net_load_minus_loadshedding,
                             a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])
         
         ##### Monetary savings (revenue) from solar + battery #######

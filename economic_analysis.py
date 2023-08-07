@@ -3,14 +3,22 @@ import numpy as np
 
 ########### NPV ########### 
 
-def calculate_npv(initial_investment, cash_flows, discount_rate, residual_value):
+def calculate_npv(initial_investment, cash_flows, discount_rate, pv_residual_value, battery_residual_value):
     values = []
     for idx, cash_flow in enumerate(cash_flows):
         this_year_value = cash_flow /(1 + discount_rate)**idx
         values.append(this_year_value)
+        # if in the final year
+        if idx == len(cash_flows) - 1:
+            # add residual value (discounted)
+            pv_residual_value_discounted = pv_residual_value / (1 + discount_rate)**idx
+            battery_residual_value_discounted = battery_residual_value / (1 + discount_rate)**idx
+            total_residual_value_discounted = pv_residual_value_discounted + battery_residual_value_discounted
+            values.append(total_residual_value_discounted)
+            
     total_benefits = sum(values)
     total_costs = initial_investment
-    npv = total_benefits - total_costs + residual_value
+    npv = total_benefits - total_costs 
     return npv
 
 
@@ -24,13 +32,13 @@ def calculate_npv_with_loan(initial_investment, residual_cost_of_panels_owed,
     discount_rate = a['discount_rate']
     Rproj = a['Rproj']
     pv_annual_maintenance_cost = a['pv_annual_maintenance_cost']
-    
+    battery_annual_maintenance_cost = a['battery_annual_maintenance_cost']
     
     # Payback 
     payments = residual_cost_of_panels_owed / loan_payback_period
     
     # Revenues TODO: In future versions these will need to be calculated separately for each period, for now assume constant in all periods
-    revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - pv_annual_maintenance_cost  for year in range(Rproj)]
+    revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - pv_annual_maintenance_cost - battery_annual_maintenance_cost  for year in range(Rproj)]
     
     costs = np.zeros(len(revenues))
     # Fill the first num_periods elements of costs with PAYS_payback_per_period
@@ -98,13 +106,35 @@ def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed,
 
 ########## Investment Cost ############
 
-def calculate_capital_investment(pv_capacity, battery_capacity, a):
-    # Capital Cost of Investment 
-    pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity #** a['pv_cost_exponent']     # (int) capital cost of PV system 
-    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity #** a['battery_cost_exponent'] # (int) capital cost of battery
-    total_capital_cost = pv_capital_cost + battery_capital_cost
+# def calculate_capital_investment(pv_capacity, battery_capacity, a):
+#     # Capital Cost of Investment 
+#     pv_capital_cost =  a['additional_pv_capital_cost'] + a['pv_cost_per_kw'] * pv_capacity #** a['pv_cost_exponent']     # (int) capital cost of PV system 
+#     battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity #** a['battery_cost_exponent'] # (int) capital cost of battery
+#     total_capital_cost = pv_capital_cost + battery_capital_cost
     
-    return total_capital_cost
+#     return total_capital_cost
+
+def calculate_pv_capital_cost(pv_capacity, a):
+    
+    # find the inverter cost using a['inverter_cost_schedule'] and the pv_capacity 
+    # to do so, must find the closest pv capacity in the schedule
+    pv_capacities = a['inverter_cost_schedule'].keys()
+    closest_pv_capacity = min(pv_capacities, key=lambda x:abs(x-pv_capacity))
+    inverter_cost = a['inverter_cost_schedule'][closest_pv_capacity]
+    
+    panel_cost = a['pv_cost_per_kw'] * pv_capacity 
+
+    # Components cost
+    component_cost = panel_cost + inverter_cost # $/kW
+
+    # Other costs
+    peripherals_cost = component_cost * 0.20 # $/kW
+    installation_cost = (component_cost + peripherals_cost) * 0.10 # $/kW
+    markup_cost = (component_cost + peripherals_cost + installation_cost) * 0.33 # $/kW
+    
+    total_pv_capital_cost = component_cost + peripherals_cost + installation_cost + markup_cost
+    
+    return total_pv_capital_cost
 
 
 ########## Payback period ############
@@ -263,7 +293,7 @@ def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarr
             else:
                 total_cost_with_pv[i] = net_load_profile[i] * standard_cost
                 
-        else # off peak 
+        else: # off peak 
             
             total_cost_no_pv[i] = load_profile[i] * off_peak_cost
             
