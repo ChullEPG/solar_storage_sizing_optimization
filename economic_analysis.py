@@ -11,10 +11,8 @@ def calculate_npv(initial_investment, cash_flows, discount_rate, pv_residual_val
         # if in the final year
         if idx == len(cash_flows) - 1:
             # add residual value (discounted)
-            pv_residual_value_discounted = pv_residual_value / (1 + discount_rate)**idx
-            battery_residual_value_discounted = battery_residual_value / (1 + discount_rate)**idx
-            total_residual_value_discounted = pv_residual_value_discounted + battery_residual_value_discounted
-            values.append(total_residual_value_discounted)
+            residual_value = (pv_residual_value + battery_residual_value) / (1 + discount_rate)**idx
+            values.append(residual_value)
             
     total_benefits = sum(values)
     total_costs = initial_investment
@@ -23,33 +21,29 @@ def calculate_npv(initial_investment, cash_flows, discount_rate, pv_residual_val
 
 
 def calculate_npv_with_loan(initial_investment, residual_cost_of_panels_owed,  
-                            energy_savings_per_year,
-                            operational_savings_per_year,
-                           carbon_savings_per_year,
+                            revenues,
+                           pv_residual_value,
+                           battery_residual_value,
                            a):
     
-    loan_payback_period = a['loan_payback_period']
-    discount_rate = a['discount_rate']
-    Rproj = a['Rproj']
-    pv_annual_maintenance_cost = a['pv_annual_maintenance_cost']
-    battery_annual_maintenance_cost = a['battery_annual_maintenance_cost']
-    
-    # Payback 
-    payments = residual_cost_of_panels_owed / loan_payback_period
-    
-    # Revenues TODO: In future versions these will need to be calculated separately for each period, for now assume constant in all periods
-    revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - pv_annual_maintenance_cost - battery_annual_maintenance_cost  for year in range(Rproj)]
+    # Payback  - assume that the loan is paid back in equal installments over the loan_payback_period (interest already added in optimization function)
+    installments = (residual_cost_of_panels_owed / a['loan_payback_period']) 
     
     costs = np.zeros(len(revenues))
-    # Fill the first num_periods elements of costs with PAYS_payback_per_period
-    costs[:loan_payback_period] = payments
+    # Fill the first num_periods elements of costs with loan_payback_per_period
+    costs[:a['loan_payback_period']] = installments
     
     cash_flows = [revenue - cost for revenue,cost in zip(revenues,costs)]
     
     values = []
     for idx, cash_flow in enumerate(cash_flows):
-        this_year_value = cash_flow /(1 + discount_rate)**idx
+        this_year_value = cash_flow /(1 + a['discount_rate'])**idx
         values.append(this_year_value)
+        # add residual value in final year
+        if idx == len(cash_flows) - 1:
+            # add residual value (discounted)
+            residual_value = (pv_residual_value + battery_residual_value) / (1 + a['discount_rate'])**idx
+            values.append(residual_value)
         
     npv = sum(values) - initial_investment
         
@@ -57,48 +51,61 @@ def calculate_npv_with_loan(initial_investment, residual_cost_of_panels_owed,
 
 
 def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed,  
-                            energy_savings_per_year,
-                            operational_savings_per_year,
-                           carbon_savings_per_year,
+                            energy_savings,
+                            other_revenues,
+                           pv_residual_value,
+                           battery_residual_value,
                            a):
-    PAYS_cut_of_savings = a['PAYS_cut_of_savings']
-    discount_rate = a['discount_rate']
-    Rproj = a['Rproj']
-    pv_annual_maintenance_cost = a['pv_annual_maintenance_cost']
     
-    # Payback
-    PAYS_payback_per_period = energy_savings_per_year * PAYS_cut_of_savings
+    # Payback per period 
+    installments = [es * a['PAYS_cut_of_savings'] for es in energy_savings]
     
-    # Revenues TODO: In future versions these will need to be calculated separately for each period, for now assume constant in all periods
-    revenues = [energy_savings_per_year + operational_savings_per_year + carbon_savings_per_year - pv_annual_maintenance_cost for year in range(Rproj)]
+    # Energy savings that are left over after paying back the loan
+    energy_savings_kept = [es * (1 - a['PAYS_cut_of_savings']) for es in energy_savings]
     
-    # Costs
-    payback_per_period = max(PAYS_payback_per_period, residual_cost_of_panels_owed/Rproj)
+    # Total revenues
+    revenues = other_revenues + energy_savings_kept
     
-    if payback_per_period == residual_cost_of_panels_owed/Rproj:
-        num_periods = Rproj
-    else: 
-        num_periods = 0
-        paid_back = 0
-        while paid_back < residual_cost_of_panels_owed:
-            paid_back += payback_per_period
-            num_periods += 1 
+    # Find how many installments are needed to pay off the panels
+    for idx, installment in enumerate(installments):
+        residual_cost_of_panels_owed -= installment
+        if residual_cost_of_panels_owed < 0: 
+            installments[idx] = installment + residual_cost_of_panels_owed # reset the last installment to be only what is left of the residual cost of panels owed
+            installments[idx:] = 0 # no more installments owed 
+            break
+    
         
-    costs = np.zeros(len(revenues))
-    
-    # Fill the first num_periods elements of costs with PAYS_payback_per_period
-    costs[:num_periods] = payback_per_period
-    
-    # Adjust the last filled element of cost so that the sum of costs is equal to residual_cost_of_panels_owed
-    costs[num_periods - 1] = costs[num_periods - 1] + (residual_cost_of_panels_owed - sum(costs[:num_periods]))
         
+    
+    # # Costs each period - max b/t installments and "loan amont" ensure the panels are paid off in the lifetime of the panels
+    # #payback_per_period = max(installments, residual_cost_of_panels_owed/a['Rproj'])
+    # payback_per_period = installments 
+    
+    # if payback_per_period == residual_cost_of_panels_owed/a['Rproj']:
+    #     num_periods = a['Rproj']
+    # else: 
+    #     num_periods = 0
+    #     paid_back = 0
+    #     while paid_back < residual_cost_of_panels_owed:
+    #         paid_back += payback_per_period
+    #         num_periods += 1 
+        
+    costs = installments
+
     cash_flows = [revenue - cost for revenue,cost in zip(revenues,costs)]
+    if residual_cost_of_panels_owed > 0:
+        # subtract it from the last cash flow (pay back the rest of what is owed in the final time period)
+        cash_flows[-1] -= residual_cost_of_panels_owed
     
     values = []
     for idx, cash_flow in enumerate(cash_flows):
-        this_year_value = cash_flow /(1 + discount_rate)**idx
+        this_year_value = cash_flow /(1 + a['discount_rate'])**idx
         values.append(this_year_value)
-        
+        if idx == len(cash_flows) - 1:
+            # add residual value (discounted)
+            residual_value = (pv_residual_value + battery_residual_value) / (1 + a['discount_rate'])**idx
+            values.append(residual_value)
+            
     npv = sum(values) - initial_investment
         
     return npv 
@@ -312,7 +319,7 @@ def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarr
 
 ########### Cost of loadshedding ########### 
 
-def get_cost_of_missed_passengers_from_loadshedding(kWh_affected_by_loadshedding: list,
+def get_cost_of_missed_passengers_from_loadshedding_v1(kWh_affected_by_loadshedding: list,
                                                      cost_per_passenger: float,
                                                      time_passenger_per_kWh: float, 
                                                      time_periods: dict):
@@ -336,6 +343,8 @@ def get_cost_of_missed_passengers_from_loadshedding(kWh_affected_by_loadshedding
 
     for hour, kWh in enumerate(kWh_affected_by_loadshedding):
         
+        curr_hour_of_week = hour % 168 
+        
         curr_hour_of_day = hour % 24
         
         if morning_start <= curr_hour_of_day < afternoon_start:
@@ -353,7 +362,56 @@ def get_cost_of_missed_passengers_from_loadshedding(kWh_affected_by_loadshedding
     return passengers_missed * cost_per_passenger
 
 
+def get_cost_of_missed_passengers_from_loadshedding_v2(kWh_affected_by_loadshedding: list,
+                                                     time_periods: dict,
+                                                     time_of_use_tariffs: dict,
+                                                     L_km: float,
+                                                     kwh_km: float,
+                                                     cost_diesel: float):
+    
 
+
+    # Obtain energy costs for each time period of the day
+    peak_cost = time_of_use_tariffs['peak']
+    standard_cost = time_of_use_tariffs['standard']
+    off_peak_cost = time_of_use_tariffs['off_peak']
+    
+    peak_hours = time_periods['peak_hours']
+    standard_hours = time_periods['standard_hours']
+    off_peak_hours = time_periods['off_peak_hours']
+    
+    
+
+    # Initialize total cost variables
+    val_kwh_missed = np.zeros(len(kWh_affected_by_loadshedding))
+    
+    # Find cost of doing with ICE
+    kwh_L = kwh_km * (1/L_km) # kWh/L
+    cost_of_ICE_operation_per_kwh = cost_diesel / kwh_L # $/kWh
+    
+    
+
+    
+    for hour, kWh in enumerate(kWh_affected_by_loadshedding):
+        
+        curr_hour_of_week = hour % 168 
+        
+        curr_hour_of_day = hour % 24
+            
+        if curr_hour_of_week > 120: # weekend 
+            val_kwh_missed[hour] = kWh * (cost_of_ICE_operation_per_kwh - off_peak_cost)
+        
+        elif curr_hour_of_day in peak_hours:
+            val_kwh_missed[hour] = kWh * (cost_of_ICE_operation_per_kwh - peak_cost)
+
+        elif curr_hour_of_day <= standard_hours:
+            val_kwh_missed[hour] = kWh * (cost_of_ICE_operation_per_kwh - standard_cost)
+                
+        else:
+            val_kwh_missed[hour] = kWh * (cost_of_ICE_operation_per_kwh - off_peak_cost)
+                    
+    return val_kwh_missed
+    
 
 ########### Carbon offsets ########### 
 
