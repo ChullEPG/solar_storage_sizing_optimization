@@ -172,8 +172,11 @@ def get_pv_output_over_project_lifetime(capacity_factor, insolation_profile, pv_
 
 # PV Output with battery storage
 def simulate_battery_storage(load_profile, pv_output_profile, 
-                             battery_capacity, battery_duration,
-                             charging_efficiency, discharging_efficiency):
+                             battery_capacity_total, battery_duration,
+                             charging_efficiency, discharging_efficiency,
+                             depth_of_discharge):
+    
+    battery_capacity = depth_of_discharge * battery_capacity_total # Calculate the amount of battery capacity that can be used
     
     battery_power_rating = battery_capacity / battery_duration # Calculate the power rating of the battery
     

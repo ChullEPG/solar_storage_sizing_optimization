@@ -32,7 +32,8 @@ def objective_function(x, a):
     
     # Generate PV output profile with battery
     pv_with_battery_output_profile = generate_data.simulate_battery_storage(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
-                                                                            a['battery_charging_efficiency'], a['battery_discharging_efficiency'])
+                                                                            a['battery_charging_efficiency'], a['battery_discharging_efficiency'],
+                                                                            a['depth_of_discharge'])
     # Net charging load profile 
     net_load_profile = a['load_profile'] - pv_with_battery_output_profile
 
@@ -66,7 +67,7 @@ def objective_function(x, a):
         
         
     # Annual Maintenance costs
-    annual_maintenance_costs = a['battery_annual_maintenance_cost'] + a['pv_annual_maintenance_cost']
+    annual_maintenance_costs = (a['battery_annual_maintenance_cost'] * battery_capacity) + (a['pv_annual_maintenance_cost'] * pv_capacity)
         
     ##### Monetary savings (revenue) from solar + battery #######
     
@@ -444,7 +445,7 @@ def objective_function_with_solar_and_battery_degradation(x, a):
     battery_residual_value = a['battery_residual_value_factor'] * battery_capital_cost
     
     
-    maintenance_costs = a['pv_annual_maintenance_cost'] + a['battery_annual_maintenance_cost']
+    maintenance_costs = (a['pv_annual_maintenance_cost'] * pv_capacity) + (a['battery_annual_maintenance_cost'] * battery_capacity)
     
     
     # Generate PV Output profile 
@@ -462,7 +463,8 @@ def objective_function_with_solar_and_battery_degradation(x, a):
         # Generate battery profile 
         battery_capacity = battery_capacity * (1 - a['battery_annual_degradation'] * year) # degrade battery capacity by battery degradation rate
         pv_with_battery_output_profile = generate_data.simulate_battery_storage(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
-                                                                            a['battery_charging_efficiency'], a['battery_discharging_efficiency'])
+                                                                            a['battery_charging_efficiency'], a['battery_discharging_efficiency'],
+                                                                            a['depth_of_discharge'])
         
          # Generate load shedding schedule 
         loadshedding_schedule = generate_data.generate_loadshedding_schedule(pv_output_profile, a['loadshedding_probability'])
@@ -539,7 +541,7 @@ def objective_function_with_solar_and_battery_degradation_loan(x, a):
     
     
     # Maintenance costs 
-    maintenance_costs = a['pv_annual_maintenance_cost'] + a['battery_annual_maintenance_cost']
+    maintenance_costs = (a['pv_annual_maintenance_cost'] * pv_capacity) + (a['battery_annual_maintenance_cost'] * battery_capacity)
     
     #### Loan Business Model ####
     upfront_payment = a['loan_upfront_adjustment'] * total_capital_cost # (int) upfront payment for panels
@@ -559,7 +561,8 @@ def objective_function_with_solar_and_battery_degradation_loan(x, a):
         battery_capacity = battery_capacity * (1 - a['battery_annual_degradation'] * year)
         # degrade battery capacity by battery degradation rate
         pv_with_battery_output_profile = generate_data.simulate_battery_storage(a['load_profile'], pv_output_profile, battery_capacity, a['battery_duration'],
-                                                                            a['battery_charging_efficiency'], a['battery_discharging_efficiency'])
+                                                                            a['battery_charging_efficiency'], a['battery_discharging_efficiency'],
+                                                                            a['depth_of_discharge'])
         
             
             

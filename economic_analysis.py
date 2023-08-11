@@ -71,7 +71,7 @@ def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed,
         residual_cost_of_panels_owed -= installment
         if residual_cost_of_panels_owed < 0: 
             installments[idx] = installment + residual_cost_of_panels_owed # reset the last installment to be only what is left of the residual cost of panels owed
-            installments[idx:] = 0 # no more installments owed 
+            installments[idx:] = [0] * (len(installments) - idx) # no more installments owed 
             break
     
         
