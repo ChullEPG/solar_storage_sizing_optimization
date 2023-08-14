@@ -121,14 +121,19 @@ def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed,
     
 #     return total_capital_cost
 
-def calculate_pv_capital_cost(pv_capacity, a):
+def calculate_pv_capital_cost(pv_capacity, a, linearize = False):
     
     # find the inverter cost using a['inverter_cost_schedule'] and the pv_capacity 
     # to do so, must find the closest pv capacity in the schedule
-    pv_capacities = a['inverter_cost_schedule'].keys()
-    closest_pv_capacity = min(pv_capacities, key=lambda x:abs(x-pv_capacity))
-    inverter_cost = a['inverter_cost_schedule'][closest_pv_capacity]
     
+    if linearize:
+        inverter_cost = pv_capacity * a['inverter_cost_per_kw'] 
+        
+    else:  #use cost schedule
+        pv_capacities = a['inverter_cost_schedule'].keys()
+        closest_pv_capacity = min(pv_capacities, key=lambda x:abs(x-pv_capacity))
+        inverter_cost = a['inverter_cost_schedule'][closest_pv_capacity]
+        
     panel_cost = a['pv_cost_per_kw'] * pv_capacity 
 
     # Components cost
@@ -362,15 +367,15 @@ def get_cost_of_missed_passengers_from_loadshedding_v1(kWh_affected_by_loadshedd
     return passengers_missed * cost_per_passenger
 
 
-def get_cost_of_missed_passengers_from_loadshedding_v2(kWh_affected_by_loadshedding: list,
-                                                     time_periods: dict,
-                                                     time_of_use_tariffs: dict,
-                                                     L_km: float,
-                                                     kwh_km: float,
-                                                     cost_diesel: float):
+def get_cost_of_missed_passengers_from_loadshedding_v2(kWh_affected_by_loadshedding: list, a: dict):
+
+
+    time_of_use_tariffs = a['time_of_use_tariffs']
+    time_periods = a['time_periods']
+    L_km = a['L_km']
+    kwh_km = a['kwh_km']
+    cost_diesel = a['cost_diesel']
     
-
-
     # Obtain energy costs for each time period of the day
     peak_cost = time_of_use_tariffs['peak']
     standard_cost = time_of_use_tariffs['standard']
@@ -404,7 +409,7 @@ def get_cost_of_missed_passengers_from_loadshedding_v2(kWh_affected_by_loadshedd
         elif curr_hour_of_day in peak_hours:
             val_kwh_missed[hour] = kWh * (cost_of_ICE_operation_per_kwh - peak_cost)
 
-        elif curr_hour_of_day <= standard_hours:
+        elif curr_hour_of_day in standard_hours:
             val_kwh_missed[hour] = kWh * (cost_of_ICE_operation_per_kwh - standard_cost)
                 
         else:
