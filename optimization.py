@@ -590,8 +590,7 @@ def objective_function_with_solar_and_battery_degradation_loan(x, a):
         
         if a['load_shedding_bool']:
                 # Value of kWh saved from loadshedding BY solar + battery!  [makes above not needed?]
-            value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding_v2(saved_free_kWh, a['cost_per_passenger'],
-                                                                                         a['time_passenger_per_kWh'], a['time_periods'])
+            value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding_v2(saved_free_kWh, a])
             # Energy costs ($ for kWh charged) (net of load shedding - so this is actually cheaper than without loadshedding, but we account for the value of missed trips elsewhere)
             energy_cost_without_pv, energy_cost_with_pv = economic_analysis.get_cost_of_charging_v2(gross_load_minus_loadshedding, net_load_minus_loadshedding,
                                 a['time_of_use_tariffs'], a['time_periods'], a['feed_in_tariff'], feed_in_tariff_bool = a['feed_in_tariff_bool'])

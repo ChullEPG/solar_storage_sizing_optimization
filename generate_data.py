@@ -178,7 +178,7 @@ def simulate_battery_storage(load_profile, pv_output_profile,
     
     battery_capacity = depth_of_discharge * battery_capacity_total # Calculate the amount of battery capacity that can be used
     
-    battery_power_rating = battery_capacity / battery_duration # Calculate the power rating of the battery
+    battery_power_rating = battery_capacity_total / battery_duration # Calculate the power rating of the battery
     
     battery_state = 0  # Initial state of the battery
 
