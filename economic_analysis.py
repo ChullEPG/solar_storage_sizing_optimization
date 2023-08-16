@@ -121,23 +121,25 @@ def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed,
     
 #     return total_capital_cost
 
-def calculate_pv_capital_cost(pv_capacity, a, linearize = False):
+def calculate_capital_cost(pv_capacity, battery_capacity, a, linearize_inverter_cost = False):
     
     # find the inverter cost using a['inverter_cost_schedule'] and the pv_capacity 
     # to do so, must find the closest pv capacity in the schedule
     
-    if linearize:
+    if linearize_inverter_cost:
         inverter_cost = pv_capacity * a['inverter_cost_per_kw'] 
         
-    else:  #use cost schedule
+    else:  # Use cost schedule
         pv_capacities = a['inverter_cost_schedule'].keys()
         closest_pv_capacity = min(pv_capacities, key=lambda x:abs(x-pv_capacity))
         inverter_cost = a['inverter_cost_schedule'][closest_pv_capacity]
         
     panel_cost = a['pv_cost_per_kw'] * pv_capacity 
+    
+    battery_cost = a['battery_cost_per_kWh'] * battery_capacity
 
     # Components cost
-    component_cost = panel_cost + inverter_cost # $/kW
+    component_cost = panel_cost + inverter_cost + battery_cost # $/kW
 
     # Other costs
     peripherals_cost = component_cost * 0.20 # $/kW
@@ -238,8 +240,6 @@ def get_cost_of_charging_v1(load_profile: np.ndarray, net_load_profile: np.ndarr
         
     return total_cost_no_pv, total_cost_with_pv 
 
-
-
 ########## Cost of charging v2 (with peak,standard,off peak) #######
 def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarray,
                          time_of_use_tariffs: dict, time_periods: dict,
@@ -320,10 +320,7 @@ def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarr
         
     return total_cost_no_pv, total_cost_with_pv 
 
-
-
 ########### Cost of loadshedding ########### 
-
 def get_cost_of_missed_passengers_from_loadshedding_v1(kWh_affected_by_loadshedding: list,
                                                      cost_per_passenger: float,
                                                      time_passenger_per_kWh: float, 
@@ -417,7 +414,6 @@ def get_cost_of_missed_passengers_from_loadshedding_v2(kWh_affected_by_loadshedd
                     
     return val_kwh_missed
     
-
 ########### Carbon offsets ########### 
 
 def get_value_of_carbon_offsets(load_profile, net_load_profile, grid_carbon_intensity, carbon_price):
