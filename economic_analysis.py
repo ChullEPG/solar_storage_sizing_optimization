@@ -240,16 +240,19 @@ def get_cost_of_charging_v1(load_profile: np.ndarray, net_load_profile: np.ndarr
         
     return total_cost_no_pv, total_cost_with_pv 
 
+
+
+
+
+
+
 ########## Cost of charging v2 (with peak,standard,off peak) #######
 def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarray,
-                         time_of_use_tariffs: dict, time_periods: dict,
+                        time_periods: dict,
                          feed_in_tariff: int,
-                         feed_in_tariff_bool: bool):
+                         feed_in_tariff_bool: bool,
+                         a):
 
-    # Obtain energy costs for each time period of the day
-    peak_cost = time_of_use_tariffs['peak']
-    standard_cost = time_of_use_tariffs['standard']
-    off_peak_cost = time_of_use_tariffs['off_peak']
     
     peak_hours = time_periods['peak_hours']
     standard_hours = time_periods['standard_hours']
@@ -266,6 +269,18 @@ def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarr
         
         curr_hour_of_week = i % 168 
         curr_hour_of_day = i % 24
+        
+        if (i > a['high_period_start']) & (i <= a['high_period_end']): # high period (all peak)
+            peak_cost = a['time_of_use_tariffs_high']['peak']
+            standard_cost = a['time_of_use_tariffs_high']['standard']
+            off_peak_cost = a['time_of_use_tariffs_high']['off_peak']
+        else:
+            peak_cost = a['time_of_use_tariffs_low']['peak']
+            standard_cost = a['time_of_use_tariffs_low']['standard']
+            off_peak_cost = a['time_of_use_tariffs_low']['off_peak']
+        
+        
+        
         
         if curr_hour_of_week > 120: # weekend (all off-epak)
             # Without PV
