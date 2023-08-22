@@ -900,7 +900,7 @@ def objective_function_with_solar_and_battery_degradation_loan(x, a):
         usable_battery_capacity = battery_capacity - (battery_capacity * (battery_energy_throughput / battery_max_energy_throughput) * (1 - a['battery_end_of_life_perc']))
         
         # Generate PV Output profile 
-        pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], a['annual_insolation_profile'], a['pv_efficiency'], a['renewables_ninja'], usable_pv_capacity) 
+        pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
         
         # Initialize battery repurchae cost and cost of trickle charging
         battery_repurchase_cost = 0
@@ -909,7 +909,7 @@ def objective_function_with_solar_and_battery_degradation_loan(x, a):
 
         if battery_energy_throughput < battery_max_energy_throughput: 
             # degrade battery capacity by battery degradation rate
-            pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, usable_battery_capacity,  battery_energy_throughput, battery_max_energy_throughput, a)
+            pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, usable_battery_capacity,  battery_energy_throughput, battery_max_energy_throughput, a)
             
             battery_energy_throughput = battery_throughput # update battery cycles left
             

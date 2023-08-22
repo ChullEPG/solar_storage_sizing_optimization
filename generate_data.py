@@ -135,17 +135,12 @@ def simulate_insolation_profile(latitude, longitude, time_resolution, timezone):
 
 ########### PV Output ########### 
 
-def get_pv_output(capacity_factor, insolation_profile, pv_efficiency, renewables_ninja, pv_capacity):
+def get_pv_output(capacity_factor, pv_capacity):
     '''
     This function obtains the solar PV output profile given a solar insolation profile, PV efficiency, and PV capacity. The function returns the PV output profile.'''
-    if renewables_ninja:
-        pv_output_profile = [pv_capacity * cf  for cf in capacity_factor]
-        
-    else:
-        # Calculate daily PV output profile
-        pv_output_profile = [pv_capacity * pv_efficiency * insolation / 1000 for insolation in insolation_profile]
+ 
+    pv_output_profile = [pv_capacity * cf  for cf in capacity_factor]
 
-    
     return pv_output_profile
 
 
@@ -470,7 +465,6 @@ def simulate_battery_storage_v3(pv_output_profile, battery_capacity_total, batte
         
     return pv_with_battery_output_profile, battery_energy_throughput
 
-
 def simulate_battery_storage_v4(pv_output_profile, battery_capacity_total, battery_energy_throughput, battery_max_energy_throughput, a):
     
     # Net load profile
@@ -561,6 +555,9 @@ def simulate_battery_storage_v4(pv_output_profile, battery_capacity_total, batte
                         # Cost of electricity drawn
                         cost_of_charging = elec_price * energy_drawn_from_grid 
                         
+                        # Update battery state 
+                        battery_current_energy = battery_current_energy + energy_stored_in_battery
+                        
                 
             # Update battery energy throughput 
             battery_energy_throughput += energy_stored_in_battery
@@ -580,6 +577,173 @@ def simulate_battery_storage_v4(pv_output_profile, battery_capacity_total, batte
         
     return pv_with_battery_output_profile, battery_energy_throughput, cost_of_trickle_charging.sum()
 
+def simulate_battery_storage_v5(pv_output_profile, battery_capacity_total, battery_energy_throughput, battery_max_energy_throughput, a):
+    
+    # Net load profile
+    net_load_profile = [load - pv for load,pv in zip(list(a['load_profile']),pv_output_profile)] # Calculate the net load profile
+    
+    # Usable battery capacity
+    battery_capacity_usable = a['depth_of_discharge'] * battery_capacity_total # Calculate the amount of battery capacity that can be used
+    
+    # Max kWh charge or discharge in an hour (c-rating proxy)
+    battery_power_rating = battery_capacity_total / a['battery_duration'] 
+    
+    # Initial energy stored in battery
+    battery_current_energy = 0  
+    
+    # Keep track of total energy moved by the battery 
+    battery_energy_draw_from_pv_profile = np.zeros(len(pv_output_profile)) # Energy taken from PV to battery (gross of charging efficiency)
+    load_energy_received_from_battery_profile = np.zeros(len(pv_output_profile)) # Energy received by EVs from battery (net of discharging efficiency)
+    
+    
+    # Costs
+    cost_of_trickle_charging = np.zeros(len(pv_output_profile))
+    
+    for hour, net_load in enumerate(net_load_profile): 
+        
+        if battery_energy_throughput < battery_max_energy_throughput: # if haven't exceededm maximum energy throughput for the battery
+            
+            # Update the amount of room (capacity) available in the battery
+            battery_room = battery_capacity_usable - battery_current_energy 
+            
+            # Update state of charge
+            state_of_charge = 100 * (battery_current_energy/battery_capacity_total)
+            
+            
+            # # Charging efficiency changes at high levels of charge
+            # if state_of_charge <= 85 :
+            #     curr_charge_efficiency = a['battery_charging_efficiency']
+            # else:
+            #     curr_charge_efficiency = a['battery_charging_efficiency'] * battery_current_energy
+            #     curr_charge_efficiency = (1 - math.exp((state_of_charge-85)/4)/120) #TODO: Chat with Brendan to get the actual equation
+            
+            # Taken energy
+            energy_stored_in_battery = 0 
+            energy_discharged_from_battery = 0
+            
+            # Useful energy
+            energy_drawn_from_pv = 0
+            energy_received_by_load = 0
+            
+            if net_load < 0: # Excess PV production
+                
+                # Total energy drawn from PV into battery. (limited by room left in the battery, net load available, and battery c-rating,)
+              #  energy_drawn_from_pv = min(battery_room/curr_charge_efficiency, abs(net_load), battery_power_rating)
+                
+                energy_stored_in_battery, p_grid = get_battery_power_draw(battery_capacity_total, state_of_charge, abs(net_load), a)
+                
+                if (battery_room + energy_stored_in_battery) > battery_capacity_usable:
+                    energy_stored_in_battery = battery_capacity_usable - battery_room
+                
+                # Net energy stored in battery
+               # energy_stored_in_battery = energy_drawn_from_pv * curr_charge_efficiency
+
+                # Update battery state 
+                battery_current_energy = battery_current_energy + energy_stored_in_battery
+        
+            
+            elif net_load > 0: # Excess EV Load
+                
+                # Total energy discharged from battery. (limited by energy available in battery, energy demand, and battery c-rating)
+                energy_discharged_from_battery = min(battery_current_energy, net_load/a['battery_discharging_efficiency'], battery_power_rating)  
+                
+                # Net energy received by EVs
+                energy_received_by_load = energy_discharged_from_battery * a['battery_discharging_efficiency']
+                
+                # Update battery state 
+                battery_current_energy = battery_current_energy - energy_discharged_from_battery
+                      
+            elif net_load == 0: 
+                if a['enable_trickle_charging']:
+                    if ((hour % 24) < 5) or ((hour % 24) > 20): # Charge from grid only in off-peak times
+                        
+                        # # Total energy drawn from grid (limited by trickle charging rate and room available in battery)
+                        # energy_drawn_from_grid = min(a['battery_trickle_charging_rate'], battery_room/curr_charge_efficiency)
+                        
+                        # # Net energy stored in battery
+                        # energy_stored_in_battery = energy_drawn_from_grid * curr_charge_efficiency
+                        
+                        energy_stored_in_battery, p_grid = get_battery_power_draw(battery_capacity_total, state_of_charge, abs(net_load), a)
+                        
+                        
+                        
+                        # Electricity price based on season
+                        if (hour > a['high_period_start']) & (hour <= a['high_period_end']): # high period (all peak)
+                            elec_price = a['time_of_use_tariffs_high']['off_peak']
+                        else:
+                            elec_price = a['time_of_use_tariffs_low']['off_peak']
+                            
+                       
+                        cost_of_charging = elec_price * p_grid 
+                      
+                            
+                        
+                        
+                        # Update battery state 
+                        battery_current_energy = battery_current_energy + energy_stored_in_battery
+                        
+                
+            # Update battery energy throughput 
+            battery_energy_throughput += energy_stored_in_battery
+            
+            # Useful 
+            battery_energy_draw_from_pv_profile[hour] = energy_drawn_from_pv
+            load_energy_received_from_battery_profile[hour] = energy_received_by_load
+            
+            # Cost 
+            cost_of_trickle_charging[hour] = max(cost_of_charging, 0)
+             
+        else: # if there are no cycles left
+            break
+        
+    pv_with_battery_output_profile = pv_output_profile + load_energy_received_from_battery_profile - battery_energy_draw_from_pv_profile
+    
+        
+    return pv_with_battery_output_profile, battery_energy_throughput, cost_of_trickle_charging.sum()
+
+
+def get_battery_power_draw(battery_capacity, soc, net_load, a):
+    
+    P_stored = 0
+    P_grid_drawn = 0     
+    
+    E_nom = a['V_nom'] * a['Q_nom'] # W
+    M_s = battery_capacity / E_nom # Number of cells in series
+    Ah_equiv = battery_capacity/ (M_s * a['V_nom'])
+    M_p = Ah_equiv / a['Q_nom']
+   
+    
+    # Use SOC to find open circuit voltage
+    V_oc = a['a_v'] * (soc * E_nom) + a['b_v']
+    
+    # Find equivalent open circuit voltage (equivalent = for whole battery)
+    V_oc_equiv = V_oc * M_s
+    # Find equivalen resistance
+    R_equiv = (a['R'] * M_s) / M_p
+    
+    # Find battery voltage
+    V_b = V_oc/2 + np.sqrt(a['battery_charging_efficiency'] * net_load * R_equiv + 1/4*(V_oc**2))
+    # Find current voltage. Should be below V_max
+    V_t = V_b / M_s
+    
+
+    if V_t > a['V_max']: # Charging with constant voltage
+
+        # Find battery current
+        I_b = (M_s * a['V_max'] - V_oc_equiv) / R_equiv
+        
+        # Find power draw
+        P_stored = (M_s * a['V_max'] * I_b) / a['battery_charging_efficiency']
+        
+        P_grid_drawn = P_stored * a['battery_charging_efficiency']
+        
+        
+    else:  # Charging with constant power 
+        P_stored = a['battery_charging_efficiency'] * P_stored  
+        
+        P_grid_drawn = P_stored / a['battery_charging_efficiency']
+    
+    return P_stored, P_grid_drawn
 
 ########### Loadshedding ########### 
 
