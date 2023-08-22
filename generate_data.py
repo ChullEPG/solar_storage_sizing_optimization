@@ -473,138 +473,97 @@ def simulate_battery_storage_v3(pv_output_profile, battery_capacity_total, batte
 
 def simulate_battery_storage_v4(pv_output_profile, battery_capacity_total, battery_energy_throughput, battery_max_energy_throughput, a):
     
-    battery_capacity = a['depth_of_discharge'] * battery_capacity_total # Calculate the amount of battery capacity that can be used
+    # Net load profile
+    net_load_profile = [load - pv for load,pv in zip(list(a['load_profile']),pv_output_profile)] # Calculate the net load profile
     
-    battery_power_rating = battery_capacity_total / a['battery_duration'] # Calculate the power rating of the battery
+    # Usable battery capacity
+    battery_capacity_usable = a['depth_of_discharge'] * battery_capacity_total # Calculate the amount of battery capacity that can be used
     
-    battery_state = 0  # Initial state of the battery
-
-    battery_states = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the battery state
-        
+    # Max kWh charge or discharge in an hour (c-rating proxy)
+    battery_power_rating = battery_capacity_total / a['battery_duration'] 
     
-    # Taken
-    battery_storage_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy stored in the battery
-    battery_discharge_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
-
-    # Losses 
-    losses_from_efficiency = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the wasted energies
-    losses_from_curtailment = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the wasted energies
+    # Initial energy stored in battery
+    battery_current_energy = 0  
     
-    # Useful 
-    battery_energy_draw_from_pv_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
-    load_energy_received_from_battery_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
-    load_profile = list(a['load_profile'])
-    net_load_profile = [load - pv for load,pv in zip(load_profile ,pv_output_profile)] # Calculate the net load profile
+    # Keep track of total energy moved by the battery 
+    battery_energy_draw_from_pv_profile = np.zeros(len(pv_output_profile)) # Energy taken from PV to battery (gross of charging efficiency)
+    load_energy_received_from_battery_profile = np.zeros(len(pv_output_profile)) # Energy received by EVs from battery (net of discharging efficiency)
+    
     
     # Costs
     cost_of_trickle_charging = np.zeros(len(pv_output_profile))
     
-    charging_efficiency = a['battery_charging_efficiency']
-    discharging_efficiency = a['battery_discharging_efficiency']
-
     for hour, net_load in enumerate(net_load_profile): 
         
         if battery_energy_throughput < battery_max_energy_throughput: # if haven't exceededm maximum energy throughput for the battery
             
-            battery_room = battery_capacity - battery_state # Calculate the amount of room left in the battery
+            # Update the amount of room (capacity) available in the battery
+            battery_room = battery_capacity_usable - battery_current_energy 
             
-            # charging efficiency changes at high levels of charge
+            # Update state of charge
+            state_of_charge = 100 * (battery_current_energy/battery_capacity_total)
+            
+            
+            # Charging efficiency changes at high levels of charge
             if state_of_charge <= 85 :
-                curr_charge_efficiency = charging_efficiency
+                curr_charge_efficiency = a['battery_charging_efficiency']
             else:
-                curr_charge_efficiency = charging_efficiency * battery_state
+                curr_charge_efficiency = a['battery_charging_efficiency'] * battery_current_energy
                 curr_charge_efficiency = (1 - math.exp((state_of_charge-85)/4)/120) #TODO: Chat with Brendan to get the actual equation
             
-            # Taken 
-            energy_stored_in_battery = 0
+            # Taken energy
+            energy_stored_in_battery = 0 
             energy_discharged_from_battery = 0
-
-            # Losses
-            loss_from_efficiency = 0
-            loss_from_curtailment = 0
             
-            # Useful
+            # Useful energy
             energy_drawn_from_pv = 0
             energy_received_by_load = 0
             
             if net_load < 0: # Excess PV production
-              
-                # Update state of charge 
-                state_of_charge = 100 *(battery_state / battery_capacity_total)
                 
-                
-                # Calculate energy drawn from PV into battery. (limited by room left in the battery, net load available, and battery power rating,)
+                # Total energy drawn from PV into battery. (limited by room left in the battery, net load available, and battery c-rating,)
                 energy_drawn_from_pv = min(battery_room/curr_charge_efficiency, abs(net_load), battery_power_rating)
+                
+                # Net energy stored in battery
                 energy_stored_in_battery = energy_drawn_from_pv * curr_charge_efficiency
-                
-                    
-                
+
                 # Update battery state 
-                battery_state = battery_state + energy_stored_in_battery
-                
-                # Losses 
-                loss_from_efficiency = energy_drawn_from_pv - energy_stored_in_battery
-                loss_from_curtailment = -net_load - energy_drawn_from_pv
-                
+                battery_current_energy = battery_current_energy + energy_stored_in_battery
+        
             
+            elif net_load > 0: # Excess EV Load
                 
-            elif net_load > 0:
-                # The PV system is producing less energy than the load requires
-                # Discharge the battery to assist with the load
-                energy_discharged_from_battery = min(battery_state, net_load/discharging_efficiency, battery_power_rating)  
+                # Total energy discharged from battery. (limited by energy available in battery, energy demand, and battery c-rating)
+                energy_discharged_from_battery = min(battery_current_energy, net_load/a['battery_discharging_efficiency'], battery_power_rating)  
                 
-                    
-                energy_received_by_load = energy_discharged_from_battery * discharging_efficiency
+                # Net energy received by EVs
+                energy_received_by_load = energy_discharged_from_battery * a['battery_discharging_efficiency']
                 
                 # Update battery state 
-                battery_state = battery_state - energy_discharged_from_battery
-                
-                # Losses
-                loss_from_efficiency = energy_discharged_from_battery - energy_received_by_load
-                loss_from_curtailment = 0
-                
-                
-            elif net_load == 0:
+                battery_current_energy = battery_current_energy - energy_discharged_from_battery
+                      
+            elif net_load == 0: 
                 if a['enable_trickle_charging']:
-                    if ((hour % 24) < 5) or ((hour % 24) > 20):
-                        # draws either at trickle charge rate or according to the room left in the battery
-                        energy_drawn_from_grid = min(a['trickle_charging_rate'], battery_room/charging_efficiency)
+                    if ((hour % 24) < 5) or ((hour % 24) > 20): # Charge from grid only in off-peak times
                         
-                        energy_stored_in_battery = energy_drawn_from_grid * charging_efficiency
+                        # Total energy drawn from grid (limited by trickle charging rate and room available in battery)
+                        energy_drawn_from_grid = min(a['battery_trickle_charging_rate'], battery_room/curr_charge_efficiency)
                         
+                        # Net energy stored in battery
+                        energy_stored_in_battery = energy_drawn_from_grid * curr_charge_efficiency
                         
+                        # Electricity price based on season
                         if (hour > a['high_period_start']) & (hour <= a['high_period_end']): # high period (all peak)
                             elec_price = a['time_of_use_tariffs_high']['off_peak']
                         else:
                             elec_price = a['time_of_use_tariffs_low']['off_peak']
+                            
+                        # Cost of electricity drawn
+                        cost_of_charging = elec_price * energy_drawn_from_grid 
                         
-                        cost_of_charging = elec_price * energy_drawn_from_grid # need to pass this through
-                        
-                        # Losses 
-                        loss_from_efficiency = energy_drawn_from_grid - energy_stored_in_battery
-                        loss_from_curtailment = 0 
-                        
-                        # Update battery throughput
-                        
-                        
-                
-                # Losses 
-                loss_from_efficiency = energy_drawn_from_grid - energy_stored_in_battery
-                loss_from_curtailment = 0
                 
             # Update battery energy throughput 
             battery_energy_throughput += energy_stored_in_battery
-                
-            # Update battery states tracker
-            battery_states[hour] = battery_state
-
-            # Taken
-            battery_storage_profile[hour] = energy_stored_in_battery
-            battery_discharge_profile[hour] = energy_discharged_from_battery
-            
-            # Losses
-            losses_from_efficiency[hour] = loss_from_efficiency
-            losses_from_curtailment[hour] = loss_from_curtailment
             
             # Useful 
             battery_energy_draw_from_pv_profile[hour] = energy_drawn_from_pv
@@ -619,7 +578,7 @@ def simulate_battery_storage_v4(pv_output_profile, battery_capacity_total, batte
     pv_with_battery_output_profile = pv_output_profile + load_energy_received_from_battery_profile - battery_energy_draw_from_pv_profile
     
         
-    return pv_with_battery_output_profile, battery_energy_throughput, cost_of_trickle_charging
+    return pv_with_battery_output_profile, battery_energy_throughput, cost_of_trickle_charging.sum()
 
 
 ########### Loadshedding ########### 
@@ -710,7 +669,7 @@ def generate_stochastic_loadshedding_schedule(shedding_profile, set_random_seed 
 
 def get_battery_discharge_profile(load_profile, pv_output_profile, max_battery_capacity):
 
-    battery_state = 0  # Initial state of the battery
+    battery_current_state = 0  # Initial state of the battery
 
     storage_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy stored in the battery
     discharge_profile = np.zeros(len(pv_output_profile)) # Initialize an array to keep track of the energy discharged from the battery
