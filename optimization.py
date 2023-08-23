@@ -7,6 +7,7 @@ import generate_data
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from tqdm.notebook import tqdm_notebook
+import calculations
 
 
 # Deprecated
@@ -896,8 +897,10 @@ def objective_function_with_solar_and_battery_degradation_loan(x, a):
     for year in tqdm(range(a['Rproj']), desc="Optimizing", ncols=100, bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}"):
         
         # Update PV and battery capacity after degradation   
-        usable_pv_capacity = pv_capacity * (1 - a['solar_annual_degradation'])**year     
-        usable_battery_capacity = battery_capacity - (battery_capacity * (battery_energy_throughput / battery_max_energy_throughput) * (1 - a['battery_end_of_life_perc']))
+        usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
+        usable_battery_capacity = calculations.get_usable_battery_capacity(battery_capacity, battery_energy_throughput, battery_max_energy_throughput, year, a)
+        
+        #battery_capacity - (battery_capacity * (battery_energy_throughput / battery_max_energy_throughput) * (1 - a['battery_end_of_life_perc']))
         
         # Generate PV Output profile 
         pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
@@ -909,7 +912,7 @@ def objective_function_with_solar_and_battery_degradation_loan(x, a):
 
         if battery_energy_throughput < battery_max_energy_throughput: 
             # degrade battery capacity by battery degradation rate
-            pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, usable_battery_capacity,  battery_energy_throughput, battery_max_energy_throughput, a)
+            pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, usable_battery_capacity,  battery_energy_throughput, battery_max_energy_throughput, a)
             
             battery_energy_throughput = battery_throughput # update battery cycles left
             
