@@ -1,0 +1,41 @@
+
+# Energy costs and schedule 
+
+time_of_use_tariffs_high = {'peak': 6.97, 'standard': 2.46, 'off_peak': 1.57} 
+time_of_use_tariffs_low = {'peak': 2.61, 'standard': 1.95, 'off_peak': 1.42}
+high_period_start = 24 * (31 + 28 + 31 + 30 + 31) # 1st hour of June
+high_period_end = high_period_start + 24 * (30 + 31 + 31) # 1st hour of November
+
+time_periods = {'peak_hours': [7,8,9,18,19],
+                'standard_hours': [6,10,11,12,13,14,15,16,17,20,21],
+                'off_peak_hours': [0,1,2,3,4,5,23]}
+
+
+
+# Energy market inputs
+feed_in_tariff = 0.041 # $/kWh
+
+
+# Financial market inputs
+i_no = 0.15 # nominal interest rate
+inflation_rate = 0.0704 # inflation rate
+discount_rate = 0.05 # discount rate
+
+# Financing terms
+loan_upfront_adjustment = 0.00 # % of capital cost paid upfront
+loan_payback_period = 20 # 10 years for the solar PV system provider to fully recoup their costs
+loan_interest_rate = 0.05
+
+pays_capital_adjustment = 0.30 # 30% of capital cost paid upfront
+pays_payback_period = 20 # 10 years for the solar PV system provider to fully recoup their costs
+pays_interest_rate = 0.05 # 5% annual interest rate
+pays_cut_of_savings = 0.50 # 50% of savings go to the solar PV system provider
+
+# ICE vehicle specs
+kwh_km = 0.70 # kWh/km
+L_km = 0.15
+km_L = 1/L_km# km/L
+kwh_L = kwh_km * km_L # kWh/L
+
+cost_diesel = 1.05 # $/L
+
