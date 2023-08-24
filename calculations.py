@@ -19,4 +19,4 @@ def get_usable_battery_capacity_v2(battery_capacity, battery_energy_throughput, 
     Exponential degradation of battery capacity
     '''
     degradation = 1 / (1 + np.exp((battery_max_energy_throughput - battery_energy_throughput) / 1000))
-    return battery_capacity - battery_capacity * degradationb
+    return battery_capacity - battery_capacity * degradation

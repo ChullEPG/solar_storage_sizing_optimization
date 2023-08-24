@@ -32,7 +32,7 @@ pays_interest_rate = 0.05 # 5% annual interest rate
 pays_cut_of_savings = 0.50 # 50% of savings go to the solar PV system provider
 
 # ICE vehicle specs
-kwh_km = 0.70 # kWh/km
+kwh_km = 0.55 # kWh/km
 L_km = 0.15
 km_L = 1/L_km# km/L
 kwh_L = kwh_km * km_L # kWh/L

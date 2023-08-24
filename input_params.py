@@ -8,7 +8,7 @@ import numpy as np
 import json
 
 
-rand_to_usd = 1/16
+
 
 
 # Environmental inputs
@@ -33,13 +33,13 @@ annual_ls_1 = np.loadtxt(f"processed_ev_schedule_data/annual_ls_1.txt")
 # EV-only fleet, no lateness, without load shedding [for determining battery reqs to cover load shedding]
 #annual_ls_1_ev_only = np.loadtxt(f"processed_ev_schedule_data/annual_ls_1_ev_only.txt")
 
-
+print("Data loaded")
 
 a = {
     # Solar PV Profile 
     'annual_capacity_factor': annual_capacity_factor,
     # EV charging load 
-    'load_profile': annual_100_perc_ev,
+    'load_profile': annual_25_perc_ev,
     # PV costs 
     'pv_cost_per_kw': solar.cost_per_kw,
     'pv_annual_maintenance_cost': solar.annual_maintenance_cost,
