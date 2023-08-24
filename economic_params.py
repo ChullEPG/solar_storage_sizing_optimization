@@ -39,3 +39,36 @@ kwh_L = kwh_km * km_L # kWh/L
 
 cost_diesel = 1.05 # $/L
 
+# {
+#         "time_of_use_tariffs_high": {
+#             "peak": 6.97,
+#             "standard": 2.46,
+#             "off_peak": 1.57
+#         },
+#         "time_of_use_tariffs_low": {
+#             "peak": 2.61,
+#             "standard": 1.95,
+#             "off_peak": 1.42
+#         },
+#         "high_period_start": 4008,
+#         "high_period_end": 9408,
+#         "time_periods": {
+#             "peak_hours": [7, 8, 9, 18, 19],
+#             "standard_hours": [6, 10, 11, 12, 13, 14, 15, 16, 17, 20, 21],
+#             "off_peak_hours": [0, 1, 2, 3, 4, 5, 23]
+#         }
+#         "feed_in_tariff": 0.041,
+#         "i_no": 0.15,
+#         "inflation_rate": 0.0704,
+#         "discount_rate": 0.05
+#         "loan_upfront_adjustment": 0.00,
+#         "loan_payback_period": 20,
+#         "loan_interest_rate": 0.05,
+#         "pays_capital_adjustment": 0.30,
+#         "pays_payback_period": 20,
+#         "pays_interest_rate": 0.05,
+#         "pays_cut_of_savings": 0.50,
+#         "kwh_km": 0.70,
+#         "L_km": 0.15,
+#         "cost_diesel": 1.05
+# }

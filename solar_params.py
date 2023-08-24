@@ -8,17 +8,6 @@ cost_per_kw = cost_per_watt * 1000 # R/kW
 # Inverter
 inverter_cost_per_kw = 0.20 * cost_per_kw 
 
-# # Components cost
-# component_cost_per_kw = inverter_cost_per_kw + cost_per_kw # $/kW
-
-# # Other costs
-# peripherals_cost_per_kw = component_cost_per_kw * 0.20 # $/kW
-# installation_cost_per_kw = (component_cost_per_kw + peripherals_cost_per_kw) * 0.10 # $/kW
-# markup_cost = (component_cost_per_kw + peripherals_cost_per_kw + installation_cost_per_kw) * 0.33 # $/kW
-
-# # Total capital cost
-# total_cost_per_kw = component_cost_per_kw + peripherals_cost_per_kw + installation_cost_per_kw + markup_cost # $/kW
-
 # Maintenance cost 
 annual_maintenance_cost = 200 # $/kW
 
@@ -30,4 +19,3 @@ annual_degradation = 0.006 # 0.6% degradation per year
 
 # Residual value
 residual_value_factor = 0.10 # %
-

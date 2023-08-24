@@ -2,6 +2,11 @@
 import solar_params as solar
 import battery_params as battery
 import economic_params as market
+#import load_ev_schedules as ev_data
+import pandas as pd 
+import numpy as np
+import json
+
 
 rand_to_usd = 1/16
 
@@ -10,13 +15,31 @@ rand_to_usd = 1/16
 grid_carbon_intensity = 0.95 # kgCO2/kWh
 carbon_price = 50/1000 # $/kgCo2
 
+# Read solar data
+annual_capacity_factor = pd.read_csv("solar_profiles/renewables_ninja_profile.csv", skiprows=3)
+annual_capacity_factor = annual_capacity_factor['electricity'].values
+
+# Read EV charging schedule data
+print("Loading data...")
+## Varying levels of EV penetration, without load shedding
+annual_25_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_25_perc_ev.txt")
+annual_50_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_50_perc_ev.txt")
+annual_75_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_75_perc_ev.txt")
+annual_100_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_100_perc_ev.txt")
+
+# Mixed fleet, with load shedding
+annual_ls_1 = np.loadtxt(f"processed_ev_schedule_data/annual_ls_1.txt")
+
+# EV-only fleet, no lateness, without load shedding [for determining battery reqs to cover load shedding]
+#annual_ls_1_ev_only = np.loadtxt(f"processed_ev_schedule_data/annual_ls_1_ev_only.txt")
+
 
 
 a = {
     # Solar PV Profile 
     'annual_capacity_factor': annual_capacity_factor,
     # EV charging load 
-    'load_profile': annual_25_perc_ev,
+    'load_profile': annual_100_perc_ev,
     # PV costs 
     'pv_cost_per_kw': solar.cost_per_kw,
     'pv_annual_maintenance_cost': solar.annual_maintenance_cost,
@@ -27,12 +50,12 @@ a = {
     # PV specifications
     'Rproj': solar.Rproj,
     'pv_efficiency': solar.efficiency,
-    'solar_annual_degradation': solar.solar_annual_degradation,# 0.6% per year
+    'solar_annual_degradation': solar.annual_degradation,# 0.6% per year
     # Battery costs
-    'battery_cost_per_kWh': battery.battery_cost_per_kwh,
-    'battery_annual_maintenance_cost': battery.battery_annual_maintenance,
-    'battery_residual_value_factor': battery.battery_residual_value_factor,
-    'depth_of_discharge': battery.battery_depth_of_discharge,
+    'battery_cost_per_kWh': battery.cost_per_kwh,
+    'battery_annual_maintenance_cost': battery.annual_maintenance_cost,
+    'battery_residual_value_factor': battery.residual_value_factor,
+    'depth_of_discharge': battery.depth_of_discharge,
     # Battery specs
     'battery_charging_efficiency': battery.charging_efficiency,
     'battery_discharging_efficiency': battery.discharging_efficiency,
@@ -57,8 +80,8 @@ a = {
     'discount_rate': market.discount_rate,
     'cost_diesel': market.cost_diesel,
     # Vehicle specs
-    'L_km': L_km, 
-    'kwh_km': kwh_km,
+    'L_km': market.L_km, 
+    'kwh_km': market.kwh_km,
     # Environmental inputs 
     'grid_carbon_intensity': grid_carbon_intensity,
     'carbon_price': carbon_price,

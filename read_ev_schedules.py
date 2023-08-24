@@ -82,3 +82,7 @@ def downsample_hourly_to_minutely(df):
     load_profile_hourly = np.nan_to_num(load_profile_hourly)
     
     return load_profile_hourly
+
+
+
+
