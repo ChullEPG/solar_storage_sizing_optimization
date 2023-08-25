@@ -5,7 +5,7 @@ cost_per_panel = 2633.35 # Rand
 cost_per_watt = cost_per_panel / panel_wattage
 #cost_per_kw = cost_per_watt * 1000 # R/kW
 
-cost_per_kw = 10000 # Rand
+cost_per_kw = 500 * 18.64 # Rand
 
 # Inverter
 inverter_cost_per_kw = 0.20 * cost_per_kw 

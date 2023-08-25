@@ -3,7 +3,8 @@ import numpy as np
 
 ########### NPV ########### 
 
-def calculate_npv(initial_investment, cash_flows, discount_rate, pv_residual_value, battery_residual_value):
+def calculate_npv(initial_investment, cash_flows, discount_rate):
+    
     values = []
     for idx, cash_flow in enumerate(cash_flows):
         this_year_value = cash_flow /(1 + discount_rate)**idx
@@ -121,7 +122,7 @@ def calculate_npv_with_PAYS(initial_investment, residual_cost_of_panels_owed,
     
 #     return total_capital_cost
 
-def calculate_capital_cost(pv_capacity, battery_capacity, a, linearize_inverter_cost = False):
+def calculate_pv_capital_cost(pv_capacity, a, linearize_inverter_cost = False):
     
     # find the inverter cost using a['inverter_cost_schedule'] and the pv_capacity 
     # to do so, must find the closest pv capacity in the schedule
@@ -135,11 +136,9 @@ def calculate_capital_cost(pv_capacity, battery_capacity, a, linearize_inverter_
         inverter_cost = a['inverter_cost_schedule'][closest_pv_capacity]
         
     panel_cost = a['pv_cost_per_kw'] * pv_capacity 
-    
-    battery_cost = a['battery_cost_per_kWh'] * battery_capacity
 
     # Components cost
-    component_cost = panel_cost + inverter_cost + battery_cost # $/kW
+    component_cost = panel_cost + inverter_cost # $/kW
 
     # Other costs
     peripherals_cost = component_cost * 0.20 # $/kW
@@ -149,6 +148,12 @@ def calculate_capital_cost(pv_capacity, battery_capacity, a, linearize_inverter_
     total_pv_capital_cost = component_cost + peripherals_cost + installation_cost + markup_cost
     
     return total_pv_capital_cost
+
+def calculate_crf(a):
+    # Calculate annual payments
+    r = a['interest rate']
+    crf = (r * (1 + r)**a['Rproj']) / ((1 + r)**a['Rproj'] - 1)
+    return crf
 
 
 ########## Payback period ############
