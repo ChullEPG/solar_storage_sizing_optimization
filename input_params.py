@@ -2,6 +2,7 @@
 import solar_params as solar
 import battery_params as battery
 import economic_params as market
+from generate_data import generate_loadshedding_profile
 #import load_ev_schedules as ev_data
 import pandas as pd 
 import numpy as np
@@ -32,6 +33,10 @@ annual_ls_1 = np.loadtxt(f"processed_ev_schedule_data/annual_ls_1.txt")
 
 # EV-only fleet, no lateness, without load shedding [for determining battery reqs to cover load shedding]
 #annual_ls_1_ev_only = np.loadtxt(f"processed_ev_schedule_data/annual_ls_1_ev_only.txt")
+
+
+## Load shedding schedule 
+load_shedding_schedule = generate_loadshedding_profile(ls_schedule)
 
 print("Data loaded")
 
@@ -67,6 +72,7 @@ a = {
     'battery_trickle_charging_rate': battery.trickle_charging_rate,
     'enable_trickle_charging': True,
     'repurchase_battery': True,
+    'limit_battery_repurchases': True,
     # Energy costs and schedule 
     'time_of_use_tariffs_high': market.time_of_use_tariffs_high,
     'time_of_use_tariffs_low': market.time_of_use_tariffs_low,
@@ -75,9 +81,9 @@ a = {
     'time_periods': market.time_periods,
     'feed_in_tariff': market.feed_in_tariff,
     # Market inputs 
-    'i_no': market.i_no,
-    'f': market.inflation_rate,
-    'discount_rate': market.discount_rate,
+    'interest rate': market.i_no,
+    'inflation rate': market.inflation_rate,
+    'discount rate': market.discount_rate,
     'cost_diesel': market.cost_diesel,
     # Vehicle specs
     'L_km': market.L_km, 

@@ -791,30 +791,6 @@ def get_battery_max_energy_throughput(battery_capacity, a):
     
 
 
-
-def generate_loadshedding_schedule(pv_output_profile, loadshedding_probability, set_random_seed = True):
-    ''' 
-    Generates loadshedding schedulef from average annual loadshedding probability [requires 1 value]
-    '''
-    schedule = []
-    hours_in_project_lifetime = len(pv_output_profile) # Calculate the number of hours of the project lifetime
-    
-    #set random seed
-    if set_random_seed:
-        random.seed(0)
-    
-    for _ in range(hours_in_project_lifetime):
-        # Generate a random value between 0 and 1
-        random_value = random.random()
-        
-        # Determine if load shedding occurs based on the random value
-        # Adjust the threshold value to control the frequency of load shedding
-        if random_value < loadshedding_probability:
-            schedule.append(True)  # Load shedding occurs
-        else:
-            schedule.append(False)  # No load shedding
-            
-    return schedule
 ########### Loadshedding ########### 
 
 def generate_loadshedding_schedule(pv_output_profile, loadshedding_probability, set_random_seed = True):
@@ -861,7 +837,28 @@ def generate_stochastic_loadshedding_schedule(shedding_profile, set_random_seed 
     return load_shedding_schedule
 
 
+def generate_loadshedding_profile(ls: list):
+    schedule = [False] * 1440  # create a list of 1440 zeros (one for each minute in a day)
+    for start, end in ls:
+        for i in range(start, end):
+            schedule[i] = True  # set the corresponding minute to True (indicating loadshedding)
+    return schedule
 
+
+def get_net_load_after_load_shedding(load_profile, pv_with_battery_output_profile, loadshedding_schedule):
+     # Profile of kWh that would be lost to load shedding WITHOUT  solar and battery 
+        gross_load_affected_by_loadshedding = np.array([a['load_profile'][i] if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
+        
+        # Profile of kWh that would have been lost to loadshedding but are saved by the solar + battery generation [these are beneficial, and not to be charged $$ for]
+        saved_free_kWh = [min(pv_with_battery_output_profile[i], gross_load_affected_by_loadshedding[i]) if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)]
+        
+        # Profile of kWh that would be lost to load shedding WITH solar and battery
+        net_load_affected_by_loadshedding = np.array([net_load_profile[i] if is_shedding and net_load_profile[i] > 0 else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
+        
+        # Find the load profiles that are net of load shedding - this is the load you neeed to charge $ for [in reality you will need an entirely new schedule] 
+        gross_load_minus_loadshedding = a['load_profile'] - gross_load_affected_by_loadshedding
+        net_load_minus_loadshedding = net_load_profile - net_load_affected_by_loadshedding 
+        return net_laod_minus_load_shedding, gross_load_minus_loadshedding, saved_free_kWh
 
 ########### Battery discharge ########### 
 

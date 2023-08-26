@@ -3,6 +3,7 @@ import numpy as np
 from scipy.optimize import minimize 
 import input_params as input 
 from scipy.optimize import differential_evolution
+import time 
 
 a = input.a 
 
@@ -11,13 +12,13 @@ annual_50_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_50_perc_ev.tx
 annual_75_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_75_perc_ev.txt")
 annual_100_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_100_perc_ev.txt")
 
-rand_to_usd = 1/16
+rand_to_usd = 1/18.64
 
 
 # Constrain PV and Battery Capacities to be between 1 and 100 kW and kWh respectively
 bounds = [(1,1000), (1,1000)]
 initial_guess = [500,500]
-opt_method = 'DE'
+opt_method = 'SLSQP'
 
 
 # Define the constraint functions for bounds
@@ -47,9 +48,11 @@ pv_capacities = []
 battery_capacities = []
 npvs = []
 
+start_time = time.time()
+
 if opt_method != 'DE':
 
-    result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan, x0 = initial_guess, args = (a,), bounds=bounds, constraints = constraints , method= opt_method)
+    result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan_v2, x0 = initial_guess, args = (a,), bounds=bounds, constraints = constraints , method= opt_method)
 
 else:
     
@@ -79,17 +82,20 @@ else:
         print("Maximum NPV: ${:.2f}".format(-max_npv))
 
 
-# # Extract the optimal capacity
-# optimal_pv_capacity = result.x[0]
-# optimal_battery_capacity = result.x[1]
+# Extract the optimal capacity
+optimal_pv_capacity = result.x[0]
+optimal_battery_capacity = result.x[1]
 
-# # Calculate the minimum cash flow
-# max_npv = result.fun * rand_to_usd # rescale objective back to normal and convert to USD
+# Calculate the minimum cash flow
+max_npv = result.fun * rand_to_usd # rescale objective back to normal and convert to USD
 
-# # Print the results
-# print("Optimal PV rating: {:.2f} kW".format(optimal_pv_capacity))
-# print("Optimal battery rating: {:.2f} kWh".format(optimal_battery_capacity))
-# print("Maximum NPV: ${:.2f}".format(-max_npv))
+# Print the results
+print("Optimal PV rating: {:.2f} kW".format(optimal_pv_capacity))
+print("Optimal battery rating: {:.2f} kWh".format(optimal_battery_capacity))
+print("Maximum NPV: ${:.2f}".format(-max_npv))
+end_time = time.time()
+time_elapsed = end_time - start_time
+print("Time elapsed:" , time_elapsed)
 
 
 print("OPTIMAL RESULTS FOR EACH", pv_capacities, battery_capacities, npvs)

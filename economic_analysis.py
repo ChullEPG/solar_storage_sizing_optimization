@@ -9,11 +9,6 @@ def calculate_npv(initial_investment, cash_flows, discount_rate):
     for idx, cash_flow in enumerate(cash_flows):
         this_year_value = cash_flow /(1 + discount_rate)**idx
         values.append(this_year_value)
-        # if in the final year
-        if idx == len(cash_flows) - 1:
-            # add residual value (discounted)
-            residual_value = (pv_residual_value + battery_residual_value) / (1 + discount_rate)**idx
-            values.append(residual_value)
             
     total_benefits = sum(values)
     total_costs = initial_investment
@@ -252,17 +247,14 @@ def get_cost_of_charging_v1(load_profile: np.ndarray, net_load_profile: np.ndarr
 
 
 ########## Cost of charging v2 (with peak,standard,off peak) #######
-def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarray,
-                        time_periods: dict,
-                         feed_in_tariff: int,
-                         feed_in_tariff_bool: bool,
-                         a):
+def get_cost_of_charging_v2(net_load_profile: np.ndarray, a):
 
     
-    peak_hours = time_periods['peak_hours']
-    standard_hours = time_periods['standard_hours']
-    off_peak_hours = time_periods['off_peak_hours']
+    peak_hours = a['time_periods']['peak_hours']
+    standard_hours = a['time_periods']['standard_hours']
+    off_peak_hours = a['time_periods']['off_peak_hours']
     
+    load_profile = a['load_profile']
     
     # Initialize total cost variables
     total_cost_no_pv = np.zeros(len(load_profile))
@@ -283,9 +275,7 @@ def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarr
             peak_cost = a['time_of_use_tariffs_low']['peak']
             standard_cost = a['time_of_use_tariffs_low']['standard']
             off_peak_cost = a['time_of_use_tariffs_low']['off_peak']
-        
-        
-        
+    
         
         if curr_hour_of_week > 120: # weekend (all off-epak)
             # Without PV
@@ -293,10 +283,7 @@ def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarr
             # With PV
             if net_load_profile[i] < 0: # PV output is greater than EV load
                 
-                if feed_in_tariff_bool: # if there is a feed-in-tariff 
-                    total_cost_with_pv[i] = net_load_profile[i] * feed_in_tariff # apply feed-in tariff
-                else:
-                    total_cost_with_pv[i] = 0 # otherwise, energy is simply curtailed and there is no cost
+                total_cost_with_pv[i] = 0 # otherwise, energy is simply curtailed and there is no cost
             else:
                 total_cost_with_pv[i] = net_load_profile[i] * off_peak_cost
             
@@ -306,10 +293,7 @@ def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarr
             
             if net_load_profile[i] < 0: 
                 
-                if feed_in_tariff_bool: 
-                    total_cost_with_pv[i] = net_load_profile[i] * feed_in_tariff 
-                else:
-                    total_cost_with_pv[i] = 0 
+                total_cost_with_pv[i] = 0 
             else:
                 total_cost_with_pv[i] = net_load_profile[i] * peak_cost
             
@@ -318,10 +302,7 @@ def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarr
             total_cost_no_pv[i] = load_profile[i] * standard_cost
             
             if net_load_profile[i] < 0:
-                if feed_in_tariff_bool:
-                    total_cost_with_pv[i] = net_load_profile[i] * feed_in_tariff
-                else:
-                    total_cost_with_pv[i] = 0
+                total_cost_with_pv[i] = 0
             else:
                 total_cost_with_pv[i] = net_load_profile[i] * standard_cost
                 
@@ -330,15 +311,69 @@ def get_cost_of_charging_v2(load_profile: np.ndarray, net_load_profile: np.ndarr
             total_cost_no_pv[i] = load_profile[i] * off_peak_cost
             
             if net_load_profile[i] < 0:
-                if feed_in_tariff_bool:
-                    total_cost_with_pv[i] = net_load_profile[i] * feed_in_tariff
-                else:
-                    total_cost_with_pv[i] = 0
+                total_cost_with_pv[i] = 0
             else:
                 total_cost_with_pv[i] = net_load_profile[i] * off_peak_cost
                 
         
     return total_cost_no_pv, total_cost_with_pv 
+
+
+
+
+def get_energy_savings(cost_of_trickle_charging, pv_with_battery_output_profile, year, a):
+    
+    load_profile = a['load_profile']
+    net_load_profile = load_profile - pv_with_battery_output_profile
+
+    peak_hours = a['time_periods']['peak_hours']
+    standard_hours = a['time_periods']['standard_hours']
+    off_peak_hours = a['time_periods']['off_peak_hours']
+    
+    # Initialize total cost variables
+    total_cost_no_pv = np.zeros(len(load_profile))
+    total_cost_with_pv = np.zeros(len(net_load_profile))
+    
+    # Calculate total cost of energy with and without PV
+    for i in range(len(total_cost_no_pv)):      
+        curr_hour_of_week = i % 168 
+        curr_hour_of_day = i % 24
+        
+        if (i > a['high_period_start']) & (i <= a['high_period_end']): # high period (all peak)
+            peak_cost = a['time_of_use_tariffs_high']['peak'] * (1 + a['inflation rate'])**(year - 1)
+            standard_cost = a['time_of_use_tariffs_high']['standard'] * (1 + a['inflation rate'])**(year - 1)
+            off_peak_cost = a['time_of_use_tariffs_high']['off_peak'] * (1 + a['inflation rate'])**(year - 1) 
+        else:
+            peak_cost = a['time_of_use_tariffs_low']['peak'] * (1 + a['inflation rate'])**(year - 1)
+            standard_cost = a['time_of_use_tariffs_low']['standard'] * (1 + a['inflation rate'])**(year - 1)
+            off_peak_cost = a['time_of_use_tariffs_low']['off_peak'] * (1 + a['inflation rate'])**(year - 1)       
+             
+        if curr_hour_of_week > 120: # weekend is all off-peak
+            total_cost_no_pv[i] = load_profile[i] * off_peak_cost 
+            if net_load_profile[i] < 0: # If PV output is greater than EV load
+                total_cost_with_pv[i] = 0 # No feed-in tariff, so excess supply is curtailed 
+            else:
+                total_cost_with_pv[i] = net_load_profile[i] * off_peak_cost        
+        elif curr_hour_of_day in peak_hours: #peak 
+            total_cost_no_pv[i] = load_profile[i] * peak_cost 
+            if net_load_profile[i] < 0: 
+                total_cost_with_pv[i] = 0 
+            else:
+                total_cost_with_pv[i] = net_load_profile[i] * peak_cost         
+        elif curr_hour_of_day in standard_hours: #standard 
+            total_cost_no_pv[i] = load_profile[i] * standard_cost      
+            if net_load_profile[i] < 0:
+                total_cost_with_pv[i] = 0
+            else:
+                total_cost_with_pv[i] = net_load_profile[i] * standard_cost     
+        else: # off peak       
+            total_cost_no_pv[i] = load_profile[i] * off_peak_cost      
+            if net_load_profile[i] < 0:
+                total_cost_with_pv[i] = 0
+            else:
+                total_cost_with_pv[i] = net_load_profile[i] * off_peak_cost      
+                
+    return total_cost_no_pv.sum() - total_cost_with_pv.sum() - cost_of_trickle_charging
 
 ########### Cost of loadshedding ########### 
 def get_cost_of_missed_passengers_from_loadshedding_v1(kWh_affected_by_loadshedding: list,
