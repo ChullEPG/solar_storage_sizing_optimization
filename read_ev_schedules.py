@@ -67,7 +67,7 @@ def process_ev_schedule_data(filepath):
     return station_load_profile
 
 
-def downsample_hourly_to_minutely(df):
+def downsample_minutely_to_hourly(df):
     
     # Select every 60th row using array indexing
     hourly_charging_profile = df.rolling(window=60).sum().iloc[::60]

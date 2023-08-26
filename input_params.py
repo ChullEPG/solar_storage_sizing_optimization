@@ -2,14 +2,13 @@
 import solar_params as solar
 import battery_params as battery
 import economic_params as market
+import load_shedding_schedules 
 from generate_data import generate_loadshedding_profile
 #import load_ev_schedules as ev_data
 import pandas as pd 
 import numpy as np
-import json
-
-
-
+# import json
+import pdb
 
 
 # Environmental inputs
@@ -36,7 +35,22 @@ annual_ls_1 = np.loadtxt(f"processed_ev_schedule_data/annual_ls_1.txt")
 
 
 ## Load shedding schedule 
-load_shedding_schedule = generate_loadshedding_profile(ls_schedule)
+ls_0 = generate_loadshedding_profile(load_shedding_schedules.ls_0)
+ls_1 = generate_loadshedding_profile(load_shedding_schedules.ls_1)
+ls_2 = generate_loadshedding_profile(load_shedding_schedules.ls_2)
+ls_3 = generate_loadshedding_profile(load_shedding_schedules.ls_3)
+
+## Append them together to make weekly thingy
+ls_order_1 = np.concatenate((ls_2, ls_2, ls_2, ls_2, ls_1, ls_1, ls_1), axis = 0)
+ls_order_2 = np.concatenate((ls_2, ls_2, ls_1, ls_1, ls_1, ls_1, ls_0), axis = 0)
+ls_order_3 = np.concatenate((ls_1, ls_1, ls_1, ls_0, ls_0, ls_0, ls_0), axis = 0)
+# Make annual by repeating it 52 times and adding one to the end 
+ls_annual_1 = np.concatenate([np.tile(ls_order_1, 52), ls_2], axis = 0)
+ls_annual_2 = np.concatenate([np.tile(ls_order_2, 52), ls_2], axis = 0)
+ls_annual_3 = np.concatenate([np.tile(ls_order_2, 52), ls_1], axis = 0)
+# Empty ls_annual schedule
+ls_annual_empty = np.zeros(8760)
+     
 
 print("Data loaded")
 
@@ -49,13 +63,11 @@ a = {
     'pv_cost_per_kw': solar.cost_per_kw,
     'pv_annual_maintenance_cost': solar.annual_maintenance_cost,
     'solar_residual_value_factor': solar.residual_value_factor,
-    # Inverter costs
-    'inverter_cost_per_kw': solar.inverter_cost_per_kw, 
-    'linearize_inverter_cost': True, 
     # PV specifications
     'Rproj': solar.Rproj,
-    'pv_efficiency': solar.efficiency,
     'solar_annual_degradation': solar.annual_degradation,# 0.6% per year
+    # Inverter costs
+    'inverter_cost_per_kw': solar.inverter_cost_per_kw, 
     # Battery costs
     'battery_cost_per_kWh': battery.cost_per_kwh,
     'battery_annual_maintenance_cost': battery.annual_maintenance_cost,
@@ -67,11 +79,10 @@ a = {
     'battery_annual_degradation': battery.annual_degradation, # 2% per year
     'battery_duration': battery.duration, 
     'battery_max_cycles': battery.max_cycles,
-    'battery_max_energy_throughput': battery.energy_throughput,
     'battery_end_of_life_perc': battery.end_of_life_perc,
     'battery_trickle_charging_rate': battery.trickle_charging_rate,
     'enable_trickle_charging': True,
-    'repurchase_battery': True,
+    'repurchase_battery': False,
     'limit_battery_repurchases': True,
     # Energy costs and schedule 
     'time_of_use_tariffs_high': market.time_of_use_tariffs_high,
@@ -81,33 +92,17 @@ a = {
     'time_periods': market.time_periods,
     'feed_in_tariff': market.feed_in_tariff,
     # Market inputs 
-    'interest rate': market.i_no,
+    'interest rate': market.interest_rate,
     'inflation rate': market.inflation_rate,
     'discount rate': market.discount_rate,
     'cost_diesel': market.cost_diesel,
     # Vehicle specs
     'L_km': market.L_km, 
     'kwh_km': market.kwh_km,
-    # Environmental inputs 
-    'grid_carbon_intensity': grid_carbon_intensity,
-    'carbon_price': carbon_price,
-    # Load shedding and operational cost of serving demand during load shedding  
-    # 'loadshedding_probability': loadshedding_probability,
-    # 'time_passenger_per_kWh': time_passenger_per_kWh,
-    # 'cost_per_passenger': cost_per_passenger,
+    # Load shedding 
+    'load_shedding_schedule': ls_annual_empty,
     # Loan model
-    'loan_upfront_adjustment': market.loan_upfront_adjustment,
-    'loan_payback_period': market.loan_payback_period,
-    'loan_interest_rate': market.loan_interest_rate,
-    # Sensitivity analysis bools
-    'feed_in_tariff_bool': False,
-    'renewables_ninja': True,
-    'carbon_price_bool': False,
-    'load_shedding_bool': False,
-    # # Land area 
-    # 'pv_m_sq_per_kw': pv.m_sq_per_kw,
-    # 'max_land_area': pv.max_land_area,
-    
+  #  'loan_payback_period': market.loan_payback_period,
     # Battery cell specs
     'V_nom': battery.V_nom,
     'V_max':battery.V_max, 

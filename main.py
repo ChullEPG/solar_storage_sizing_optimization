@@ -17,8 +17,8 @@ rand_to_usd = 1/18.64
 
 # Constrain PV and Battery Capacities to be between 1 and 100 kW and kWh respectively
 bounds = [(1,1000), (1,1000)]
-initial_guess = [500,500]
-opt_method = 'SLSQP'
+initial_guess = [100, 100]
+opt_method = 'DE'
 
 
 # Define the constraint functions for bounds
@@ -52,34 +52,34 @@ start_time = time.time()
 
 if opt_method != 'DE':
 
-    result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan_v2, x0 = initial_guess, args = (a,), bounds=bounds, constraints = constraints , method= opt_method)
+    result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan_v3, x0 = initial_guess, args = (a,), bounds=bounds, constraints = constraints , method= opt_method)
 
 else:
     
-    for load_profile in [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]:
-        a['load_profile'] = load_profile
+    # for load_profile in [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]:
+    #     a['load_profile'] = load_profile
 
-        # Run the Differential Evolution optimization with the callback function
-        result = differential_evolution(optimization.objective_function_with_solar_and_battery_degradation_loan,
-                                        bounds, args=(a,),  maxiter=300)
+    # Run 
+    result = differential_evolution(optimization.objective_function_with_solar_and_battery_degradation_loan_v3,
+                                    bounds, args=(a,),  maxiter=300)
 
 
 
-                # Extract the optimal capacity
-        optimal_pv_capacity = result.x[0]
-        optimal_battery_capacity = result.x[1]
+    # Extract results         
+    optimal_pv_capacity = result.x[0]
+    optimal_battery_capacity = result.x[1]
 
-        # Calculate the minimum cash flow
-        max_npv = result.fun * rand_to_usd # rescale objective back to normal and convert to USD
-        
-        pv_capacities.append(optimal_pv_capacity)
-        battery_capacities.append(optimal_battery_capacity)
-        npvs.append(max_npv)
+    # Convert to USD
+    max_npv = result.fun * rand_to_usd # 
+    
+    # pv_capacities.append(optimal_pv_capacity)
+    # battery_capacities.append(optimal_battery_capacity)
+    # npvs.append(max_npv)
 
-        # Print the results
-        print("Optimal PV rating: {:.2f} kW".format(optimal_pv_capacity))
-        print("Optimal battery rating: {:.2f} kWh".format(optimal_battery_capacity))
-        print("Maximum NPV: ${:.2f}".format(-max_npv))
+    # Print the results
+    print("Optimal PV rating: {:.2f} kW".format(optimal_pv_capacity))
+    print("Optimal battery rating: {:.2f} kWh".format(optimal_battery_capacity))
+    print("Maximum NPV: ${:.2f}".format(-max_npv))
 
 
 # Extract the optimal capacity
@@ -94,7 +94,7 @@ print("Optimal PV rating: {:.2f} kW".format(optimal_pv_capacity))
 print("Optimal battery rating: {:.2f} kWh".format(optimal_battery_capacity))
 print("Maximum NPV: ${:.2f}".format(-max_npv))
 end_time = time.time()
-time_elapsed = end_time - start_time
+time_elapsed = (end_time - start_time)/60
 print("Time elapsed:" , time_elapsed)
 
 

@@ -4,17 +4,7 @@ import datetime
 import pysolar.solar as solar
 import random
 import math 
-
-########### Get parameters ########### 
-
-def get_user_input():
-    params = {}
-
-    # Ask for input and store in the dictionary
-    params['name'] = input("Enter your name: ")
-
-
-    return params 
+  
 
 ########### Charging load ########### 
 
@@ -838,10 +828,13 @@ def generate_stochastic_loadshedding_schedule(shedding_profile, set_random_seed 
 
 
 def generate_loadshedding_profile(ls: list):
-    schedule = [False] * 1440  # create a list of 1440 zeros (one for each minute in a day)
+    schedule = [False] * 24   
     for start, end in ls:
-        for i in range(start, end):
+        start_hour = int(start/60)
+        end_hour = int(end/60)
+        for i in range(start_hour, end_hour): # Change from minutely to hourly schedule
             schedule[i] = True  # set the corresponding minute to True (indicating loadshedding)
+    
     return schedule
 
 

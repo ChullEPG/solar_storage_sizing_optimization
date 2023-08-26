@@ -1,8 +1,16 @@
 
 # Energy costs and schedule 
+rand_to_usd = 1/18.64
 
 time_of_use_tariffs_high = {'peak': 6.97, 'standard': 2.46, 'off_peak': 1.57} 
 time_of_use_tariffs_low = {'peak': 2.61, 'standard': 1.95, 'off_peak': 1.42}
+
+# Convert to USD
+for key in time_of_use_tariffs_high:
+    time_of_use_tariffs_high[key] *= rand_to_usd
+    time_of_use_tariffs_low[key] *= rand_to_usd
+    
+    
 high_period_start = 24 * (31 + 28 + 31 + 30 + 31) # 1st hour of June
 high_period_end = high_period_start + 24 * (30 + 31 + 31) # 1st hour of November
 
@@ -17,19 +25,19 @@ feed_in_tariff = 0.041 # $/kWh
 
 
 # Financial market inputs
-i_no = 0.15 # nominal interest rate
+interest_rate = 0.1175 #  SA interest rate
 inflation_rate = 0.0704 # inflation rate
 discount_rate = 0.05 # discount rate
 
 # Financing terms
-loan_upfront_adjustment = 0.00 # % of capital cost paid upfront
+# loan_upfront_adjustment = 0.00 # % of capital cost paid upfront
 loan_payback_period = 20 # 10 years for the solar PV system provider to fully recoup their costs
-loan_interest_rate = 0.05
+# loan_interest_rate = 0.05
 
-pays_capital_adjustment = 0.30 # 30% of capital cost paid upfront
-pays_payback_period = 20 # 10 years for the solar PV system provider to fully recoup their costs
-pays_interest_rate = 0.05 # 5% annual interest rate
-pays_cut_of_savings = 0.50 # 50% of savings go to the solar PV system provider
+# pays_capital_adjustment = 0.30 # 30% of capital cost paid upfront
+# pays_payback_period = 20 # 10 years for the solar PV system provider to fully recoup their costs
+# pays_interest_rate = 0.05 # 5% annual interest rate
+# pays_cut_of_savings = 0.50 # 50% of savings go to the solar PV system provider
 
 # ICE vehicle specs
 kwh_km = 0.55 # kWh/km

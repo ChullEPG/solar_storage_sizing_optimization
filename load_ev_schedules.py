@@ -31,10 +31,10 @@ annual_75_perc_ev = pd.concat([pd.concat([weekly_75_perc_ev] * 52, ignore_index=
 annual_100_perc_ev = pd.concat([pd.concat([weekly_100_perc_ev] * 52, ignore_index=True), sat_100_perc_ev], ignore_index=True)
 
 # Downsample from minutely to hourly
-annual_25_perc_ev = downsample_hourly_to_minutely(annual_25_perc_ev)
-annual_50_perc_ev = downsample_hourly_to_minutely(annual_50_perc_ev)
-annual_75_perc_ev = downsample_hourly_to_minutely(annual_75_perc_ev)
-annual_100_perc_ev = downsample_hourly_to_minutely(annual_100_perc_ev)
+annual_25_perc_ev = downsample_minutely_to_hourly(annual_25_perc_ev)
+annual_50_perc_ev = downsample_minutely_to_hourly(annual_50_perc_ev)
+annual_75_perc_ev = downsample_minutely_to_hourly(annual_75_perc_ev)
+annual_100_perc_ev = downsample_minutely_to_hourly(annual_100_perc_ev)
 
 # write files
 np.savetxt(f"processed_ev_schedule_data/annual_25_perc_ev.txt", annual_25_perc_ev)
@@ -50,11 +50,11 @@ np.savetxt(f"processed_ev_schedule_data/annual_100_perc_ev.txt", annual_100_perc
 ######################################################################################################################################################
 ######################################################################################################################################################
 
-# Processing Weekly schedules
-mon_fri_ls_1 = pd.concat([process_ev_schedule_data('data/3 scenarios data/ls_mixed_fleet/m_f_0_ev=63_ice=0_ice_distance=0.txt')]*5, ignore_index = True)
-mon_fri_ls_2= pd.concat([process_ev_schedule_data('data/3 scenarios data/ls_mixed_fleet/m_f_1_ev=51_ice=0_ice_distance=0.txt')]*5, ignore_index = True)
-mon_fri_ls_3 = pd.concat([process_ev_schedule_data('data/3 scenarios data/ls_mixed_fleet/m_f_2_ev=50_ice=0_ice_distance=0.txt')]*5, ignore_index = True)
-mon_fri_ls_4 = pd.concat([process_ev_schedule_data('data/3 scenarios data/ls_mixed_fleet/m_f_3_ev=53_ice=0_ice_distance=0.txt')]*5, ignore_index = True)
+# Processing Weekly schedules (note- only taking first day of week for each of these so that can append them together in desired order)
+mon_fri_ls_1 = pd.concat([process_ev_schedule_data('data/3 scenarios data/ls_mixed_fleet/m_f_0_ev=63_ice=0_ice_distance=0.txt')]*5, ignore_index = True)[0:1440]
+mon_fri_ls_2= pd.concat([process_ev_schedule_data('data/3 scenarios data/ls_mixed_fleet/m_f_1_ev=51_ice=0_ice_distance=0.txt')]*5, ignore_index = True)[0:1440]
+mon_fri_ls_3 = pd.concat([process_ev_schedule_data('data/3 scenarios data/ls_mixed_fleet/m_f_2_ev=50_ice=0_ice_distance=0.txt')]*5, ignore_index = True)[0:1440]
+mon_fri_ls_4 = pd.concat([process_ev_schedule_data('data/3 scenarios data/ls_mixed_fleet/m_f_3_ev=53_ice=0_ice_distance=0.txt')]*5, ignore_index = True)[0:1440]
 
 # Processing Saturday schedules 
 sat_ls_1 = process_ev_schedule_data('data/3 scenarios data/ls_mixed_fleet/sat_0_ev=73_ice=10_ice_distance=2924.5000000000064.txt')
@@ -81,10 +81,10 @@ annual_ls_1 = pd.concat([pd.concat([weekly_ls_1] * 52, ignore_index=True), sat_l
 # annual_ls_4 = pd.concat([pd.concat([weekly_ls_4] * 52, ignore_index=True), sat_ls_4], ignore_index=True)
 
 # Downsample from minutely to hourly
-annual_ls_1 = downsample_hourly_to_minutely(annual_ls_1)
-# annual_ls_2 = downsample_hourly_to_minutely(annual_ls_2)
-# annual_ls_3 = downsample_hourly_to_minutely(annual_ls_3)
-# annual_ls_4 = downsample_hourly_to_minutely(annual_ls_4)
+annual_ls_1 = downsample_minutely_to_hourly(annual_ls_1)
+# annual_ls_2 = downsample_minutely_to_hourly(annual_ls_2)
+# annual_ls_3 = downsample_minutely_to_hourly(annual_ls_3)
+# annual_ls_4 = downsample_minutely_to_hourly(annual_ls_4)
 
 
 # write files
@@ -131,10 +131,10 @@ annual_ls_1_ev_only = pd.concat([pd.concat([weekly_ls_1_ev_only] * 52, ignore_in
 # annual_ls_4 = pd.concat([pd.concat([weekly_ls_4] * 52, ignore_index=True), sat_ls_4], ignore_index=True)
 
 # Downsample from minutely to hourly
-annual_ls_1_ev_only = downsample_hourly_to_minutely(annual_ls_1_ev_only)
-# annual_ls_2 = downsample_hourly_to_minutely(annual_ls_2)
-# annual_ls_3 = downsample_hourly_to_minutely(annual_ls_3)
-# annual_ls_4 = downsample_hourly_to_minutely(annual_ls_4)
+annual_ls_1_ev_only = downsample_minutely_to_hourly(annual_ls_1_ev_only)
+# annual_ls_2 = downsample_minutely_to_hourly(annual_ls_2)
+# annual_ls_3 = downsample_minutely_to_hourly(annual_ls_3)
+# annual_ls_4 = downsample_minutely_to_hourly(annual_ls_4)
 
 
 # write files
