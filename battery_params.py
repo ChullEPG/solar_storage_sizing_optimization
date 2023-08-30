@@ -1,14 +1,14 @@
 import numpy as np
 
-# Battery cost
-size = 2400 #Wh
-cost_per_battery = 12308.12 # Rand
-cost_per_wh = cost_per_battery/size
+# # Battery cost
+# size = 2400 #Wh
+# cost_per_battery = 12308.12 # Rand
+# cost_per_wh = cost_per_battery/size
 
 # convert to kWh
-cost_per_kwh = 300   # R/kWh 
+cost_per_kwh = 300 # $/kWh 
 
-annual_maintenance_cost = 10 # R/kW
+annual_maintenance_cost = 10 # $/kW
 
 # Battery system specifications
 charging_efficiency = np.sqrt(0.95) #%
@@ -17,8 +17,7 @@ duration = 2 # hours (for max power draw
 depth_of_discharge = 0.90 # %
 
 # lifetime ratings
-energy_throughput = #2e5 #kWh - total energy battery can output in lifetime
-max_cycles = 20000 # num cycles battery can run through in lifetime
+max_cycles = 10000 # num cycles battery can run through in lifetime
 end_of_life_perc = 0.80 # percent of original capacity left at end of life 
 
 # Residual value

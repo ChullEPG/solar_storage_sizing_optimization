@@ -58,7 +58,7 @@ a = {
     # Solar PV Profile 
     'annual_capacity_factor': annual_capacity_factor,
     # EV charging load 
-    'load_profile': annual_25_perc_ev,
+    'load_profile': annual_100_perc_ev,
     # PV costs 
     'pv_cost_per_kw': solar.cost_per_kw,
     'pv_annual_maintenance_cost': solar.annual_maintenance_cost,
@@ -76,7 +76,7 @@ a = {
     # Battery specs
     'battery_charging_efficiency': battery.charging_efficiency,
     'battery_discharging_efficiency': battery.discharging_efficiency,
-    'battery_annual_degradation': battery.annual_degradation, # 2% per year
+    #'battery_annual_degradation': battery.annual_degradation, # 2% per year
     'battery_duration': battery.duration, 
     'battery_max_cycles': battery.max_cycles,
     'battery_end_of_life_perc': battery.end_of_life_perc,
@@ -100,6 +100,7 @@ a = {
     'L_km': market.L_km, 
     'kwh_km': market.kwh_km,
     # Load shedding 
+    'load_shedding_bool': False,
     'load_shedding_schedule': ls_annual_empty,
     # Loan model
   #  'loan_payback_period': market.loan_payback_period,

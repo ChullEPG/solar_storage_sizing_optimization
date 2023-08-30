@@ -479,6 +479,8 @@ def simulate_battery_storage_v4(pv_output_profile, battery_capacity_total, batte
     
     for hour, net_load in enumerate(net_load_profile): 
         
+        cost_of_charging = 0
+        
         if battery_energy_throughput < battery_max_energy_throughput: # if haven't exceededm maximum energy throughput for the battery
             
             # Update the amount of room (capacity) available in the battery
@@ -779,8 +781,6 @@ def get_battery_max_energy_throughput(battery_capacity, a):
     return (a['battery_max_cycles'] * usable_battery_capacity * round_trip_efficiency)
     
     
-
-
 ########### Loadshedding ########### 
 
 def generate_loadshedding_schedule(pv_output_profile, loadshedding_probability, set_random_seed = True):
