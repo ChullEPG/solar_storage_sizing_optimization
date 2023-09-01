@@ -19,6 +19,7 @@ depth_of_discharge = 0.90 # %
 # lifetime ratings
 max_cycles = 6000 # num cycles battery can run through in lifetime
 end_of_life_perc = 0.80 # percent of original capacity left at end of life 
+lifetime_years = 10 # years
 
 # Residual value
 residual_value_factor = 0.10 # % of initial cost

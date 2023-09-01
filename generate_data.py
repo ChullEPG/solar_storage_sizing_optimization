@@ -133,6 +133,16 @@ def get_pv_output(capacity_factor, pv_capacity):
 
     return pv_output_profile
 
+def get_pv_output_vectorized(pv_capacities, a):
+    # calculate the PV output profile for each pv capacity in pv_capacities, where pv_capacities is a list of pv capacities
+    pv_output_profiles = []
+    for pv_capacity in pv_capacities:
+        pv_output_profile = get_pv_output(a['annual_capacity_factor'], pv_capacity)
+        pv_output_profiles.append(pv_output_profile)
+        
+    #get_pv_output_vectorized
+    return pv_output_profiles
+
 
 def get_pv_output_over_project_lifetime(capacity_factor, insolation_profile, pv_efficiency, renewables_ninja, pv_capacity, a):
     '''
@@ -458,7 +468,11 @@ def simulate_battery_storage_v3(pv_output_profile, battery_capacity_total, batte
 def simulate_battery_storage_v4(pv_output_profile, battery_capacity_total, battery_energy_throughput, battery_max_energy_throughput, a):
     
     # Net load profile
-    net_load_profile = [load - pv for load,pv in zip(list(a['load_profile']),pv_output_profile)] # Calculate the net load profile
+    load_profile = np.array(a['load_profile'])
+    pv_output_profile = np.array(pv_output_profile)
+    net_load_profile = load_profile - pv_output_profile # Calculate the net load profile
+    
+    #net_load_profile = [load - pv for load,pv in zip(list(a['load_profile']),pv_output_profile)] # Calculate the net load profile
     
     # Usable battery capacity
     battery_capacity_usable = a['depth_of_discharge'] * battery_capacity_total # Calculate the amount of battery capacity that can be used
@@ -495,7 +509,7 @@ def simulate_battery_storage_v4(pv_output_profile, battery_capacity_total, batte
                 curr_charge_efficiency = a['battery_charging_efficiency']
             else:
                 curr_charge_efficiency = a['battery_charging_efficiency'] * battery_current_energy
-                curr_charge_efficiency = (1 - math.exp((state_of_charge-85)/4)/120) #TODO: Chat with Brendan to get the actual equation
+                curr_charge_efficiency = (1 - np.exp((state_of_charge-85)/4)/120) #TODO: Chat with Brendan to get the actual equation
             
             # Taken energy
             energy_stored_in_battery = 0 

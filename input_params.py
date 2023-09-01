@@ -81,6 +81,7 @@ a = {
     'battery_max_cycles': battery.max_cycles,
     'battery_end_of_life_perc': battery.end_of_life_perc,
     'battery_trickle_charging_rate': battery.trickle_charging_rate,
+    'battery_lifetime_years': battery.lifetime_years,
     'enable_trickle_charging': False,
     'repurchase_battery': False,
     'limit_battery_repurchases': True,
