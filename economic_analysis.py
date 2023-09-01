@@ -3,7 +3,7 @@ import numpy as np
 
 ########### NPV ########### 
 
-def calculate_npv(initial_investment, cash_flows, discount_rate):
+def calculate_npv_old(initial_investment, cash_flows, discount_rate):
     
     values = []
     for idx, cash_flow in enumerate(cash_flows):
@@ -13,6 +13,12 @@ def calculate_npv(initial_investment, cash_flows, discount_rate):
     total_benefits = sum(values)
     total_costs = initial_investment
     npv = total_benefits - total_costs 
+    return npv
+
+
+def calculate_npv(initial_investment, cash_flows, discount_rate):
+    present_values = [cf / (1 + discount_rate) ** idx for idx, cf in enumerate(cash_flows)]
+    npv = sum(present_values) - initial_investment
     return npv
 
 
@@ -145,10 +151,8 @@ def calculate_pv_capital_cost(pv_capacity, a):
     return total_pv_capital_cost
 
 def calculate_crf(a):
-    # Calculate annual payments
-    r = a['interest rate']
-    crf = (r * (1 + r)**a['Rproj']) / ((1 + r)**a['Rproj'] - 1)
-    return crf
+    # Calculate annual payments   
+    return (a['interest rate'] * (1 + r)**a['Rproj']) / ((1 + a['interest rate'])**a['Rproj'] - 1)
 
 
 ########## Payback period ############
@@ -250,7 +254,7 @@ def get_cost_of_charging_v1(load_profile: np.ndarray, net_load_profile: np.ndarr
 def get_cost_of_charging_v2(net_load_profile: np.ndarray, a):
 
     
-    peak_hours = a['time_periods']['peak_hours']
+    peak_hours = (a['time_periods']['peak_hours'])
     standard_hours = a['time_periods']['standard_hours']
     off_peak_hours = a['time_periods']['off_peak_hours']
     
@@ -318,6 +322,39 @@ def get_cost_of_charging_v2(net_load_profile: np.ndarray, a):
         
     return total_cost_no_pv, total_cost_with_pv 
 
+def get_cost_of_charging_v3(net_load_profile: np.ndarray, a):
+    peak_hours = set(a['time_periods']['peak_hours'])
+    standard_hours = set(a['time_periods']['standard_hours'])
+    off_peak_hours = set(a['time_periods']['off_peak_hours'])
+    
+    load_profile = a['load_profile']
+    
+    # Initialize total cost variables
+    total_cost_no_pv = np.zeros(len(load_profile))
+    total_cost_with_pv = np.zeros(len(net_load_profile))
+    
+    # Calculate total cost of energy with and without PV
+    tariff_periods = [(a['time_of_use_tariffs_high'], a['high_period_start'], a['high_period_end']),
+                      (a['time_of_use_tariffs_low'], 0, a['high_period_start'])]
+    
+    for i, (tariffs, start, end) in enumerate(tariff_periods):
+        peak_cost, standard_cost, off_peak_cost = tariffs['peak'], tariffs['standard'], tariffs['off_peak']
+        hours = peak_hours if start <= i * 168 <= end else off_peak_hours
+        hours |= standard_hours
+        
+        total_cost_no_pv[i*168:(i+1)*168] = load_profile[i*168:(i+1)*168] * off_peak_cost
+        total_cost_with_pv[i*168:(i+1)*168] = np.maximum(net_load_profile[i*168:(i+1)*168], 0) * off_peak_cost
+        
+        for j in range(i*168, (i+1)*168):
+            if j % 24 in hours:
+                total_cost_no_pv[j] = load_profile[j] * peak_cost
+                total_cost_with_pv[j] = np.maximum(net_load_profile[j], 0) * peak_cost
+            elif j % 24 in standard_hours:
+                total_cost_no_pv[j] = load_profile[j] * standard_cost
+                total_cost_with_pv[j] = np.maximum(net_load_profile[j], 0) * standard_cost
+                
+    return total_cost_no_pv, total_cost_with_pv
+
 
 
 
@@ -374,6 +411,43 @@ def get_energy_savings(cost_of_trickle_charging, load_profile, net_load_profile,
                 total_cost_with_pv[i] = net_load_profile[i] * off_peak_cost      
                 
     return total_cost_no_pv.sum() - total_cost_with_pv.sum() - cost_of_trickle_charging
+
+
+
+def get_energy_savings_v2(cost_of_trickle_charging, load_profile, net_load_profile, year, a):
+    
+    peak_hours = a['time_periods']['peak_hours']
+    standard_hours = a['time_periods']['standard_hours']
+    off_peak_hours = a['time_periods']['off_peak_hours']
+    
+    # Calculate total cost of energy with and without PV
+    curr_hour_of_week = np.arange(len(load_profile)) % 168 
+    curr_hour_of_day = np.arange(len(load_profile)) % 24
+    
+    peak_cost = np.where((curr_hour_of_week > a['high_period_start']) & (curr_hour_of_week <= a['high_period_end']),
+                         a['time_of_use_tariffs_high']['peak'], a['time_of_use_tariffs_low']['peak'])
+    standard_cost = np.where((curr_hour_of_week > a['high_period_start']) & (curr_hour_of_week <= a['high_period_end']),
+                             a['time_of_use_tariffs_high']['standard'], a['time_of_use_tariffs_low']['standard'])
+    off_peak_cost = np.where((curr_hour_of_week > a['high_period_start']) & (curr_hour_of_week <= a['high_period_end']),
+                             a['time_of_use_tariffs_high']['off_peak'], a['time_of_use_tariffs_low']['off_peak'])
+    
+    peak_cost *= (1 + a['inflation rate'])**(year - 1)
+    standard_cost *= (1 + a['inflation rate'])**(year - 1)
+    off_peak_cost *= (1 + a['inflation rate'])**(year - 1)
+    
+    total_cost_no_pv = load_profile * ((curr_hour_of_day == off_peak_hours) * off_peak_cost
+                                       + (curr_hour_of_day == peak_hours) * peak_cost
+                                       + (curr_hour_of_day == standard_hours) * standard_cost)
+    
+    total_cost_with_pv = np.where(net_load_profile < 0, 0,
+                                   net_load_profile * ((curr_hour_of_day == off_peak_hours) * off_peak_cost
+                                                       + (curr_hour_of_day == peak_hours) * peak_cost
+                                                       + (curr_hour_of_day == standard_hours) * standard_cost))
+    
+    return total_cost_no_pv.sum() - total_cost_with_pv.sum() - cost_of_trickle_charging
+
+
+
 
 ########### Cost of loadshedding ########### 
 def get_cost_of_missed_passengers_from_loadshedding_v1(kWh_affected_by_loadshedding: list,
@@ -463,6 +537,46 @@ def get_cost_of_missed_passengers_from_loadshedding_v2(year: int, kWh_affected_b
         else:
             val_kwh_missed[hour] = kWh * (cost_of_ICE_operation_per_kwh - off_peak_cost)
                          
+    return val_kwh_missed
+
+
+
+def get_cost_of_missed_passengers_from_loadshedding_v3(year: int, kWh_affected_by_loadshedding: list, a: dict):
+    # Find cost of doing with ICE
+    kwh_L = a['kwh_km'] * (1/a['L_km']) # kWh/L
+    cost_of_ICE_operation_per_kwh = a['cost_diesel'] / kwh_L # $/kWh
+    
+    # Obtain energy costs for each time period of the day
+    peak_hours = a['time_periods']['peak_hours']
+    standard_hours = a['time_periods']['standard_hours']
+    off_peak_hours = a['time_periods']['off_peak_hours']
+    
+    # Initialize total cost variables
+    val_kwh_missed = np.zeros(len(kWh_affected_by_loadshedding))
+    
+    curr_hour_of_week = np.arange(len(kWh_affected_by_loadshedding)) % 168 
+    curr_hour_of_day = np.arange(len(kWh_affected_by_loadshedding)) % 24
+    
+    peak_cost = np.where((curr_hour_of_week > a['high_period_start']) & (curr_hour_of_week <= a['high_period_end']),
+                         a['time_of_use_tariffs_high']['peak'], a['time_of_use_tariffs_low']['peak'])
+    standard_cost = np.where((curr_hour_of_week > a['high_period_start']) & (curr_hour_of_week <= a['high_period_end']),
+                             a['time_of_use_tariffs_high']['standard'], a['time_of_use_tariffs_low']['standard'])
+    off_peak_cost = np.where((curr_hour_of_week > a['high_period_start']) & (curr_hour_of_week <= a['high_period_end']),
+                             a['time_of_use_tariffs_high']['off_peak'], a['time_of_use_tariffs_low']['off_peak'])
+    
+    peak_cost *= (1 + a['inflation rate'])**(year - 1)
+    standard_cost *= (1 + a['inflation rate'])**(year - 1)
+    off_peak_cost *= (1 + a['inflation rate'])**(year - 1)
+    
+    val_kwh_missed = np.where(curr_hour_of_week > 120, kWh_affected_by_loadshedding * (cost_of_ICE_operation_per_kwh - off_peak_cost),
+                              val_kwh_missed)
+    val_kwh_missed = np.where(np.isin(curr_hour_of_day, peak_hours), kWh_affected_by_loadshedding * (cost_of_ICE_operation_per_kwh - peak_cost),
+                              val_kwh_missed)
+    val_kwh_missed = np.where(np.isin(curr_hour_of_day, standard_hours), kWh_affected_by_loadshedding * (cost_of_ICE_operation_per_kwh - standard_cost),
+                              val_kwh_missed)
+    val_kwh_missed = np.where(np.logical_not(np.logical_or(curr_hour_of_week > 120, np.isin(curr_hour_of_day, peak_hours), np.isin(curr_hour_of_day, standard_hours)) ),
+                              kWh_affected_by_loadshedding * (cost_of_ICE_operation_per_kwh - off_peak_cost), val_kwh_missed)
+    
     return val_kwh_missed
     
 ########### Carbon offsets ########### 

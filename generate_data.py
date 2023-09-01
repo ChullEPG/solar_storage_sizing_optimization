@@ -583,7 +583,88 @@ def simulate_battery_storage_v4(pv_output_profile, battery_capacity_total, batte
         
     return pv_with_battery_output_profile, battery_energy_throughput, cost_of_trickle_charging.sum()
 
-def simulate_battery_storage_v5(pv_output_profile, battery_capacity_total, battery_energy_throughput, battery_max_energy_throughput, a):
+
+def simulate_battery_storage_v5(load_profile, pv_output_profile, battery_capacity_total, a):
+    # Net load profile
+    net_load_profile = load_profile - pv_output_profile
+    
+    # Usable battery capacity
+    battery_capacity_usable = a['depth_of_discharge'] * battery_capacity_total
+    
+    # Max kWh charge or discharge in an hour (c-rating proxy)
+    battery_power_rating = battery_capacity_total / a['battery_duration']
+    
+    # Initial energy stored in battery
+    battery_current_energy = 0
+    
+    # Keep track of total energy moved by the battery
+    battery_energy_draw_from_pv_profile = np.zeros(len(pv_output_profile))
+    load_energy_received_from_battery_profile = np.zeros(len(pv_output_profile))
+    
+    # Costs
+    cost_of_trickle_charging = np.zeros(len(pv_output_profile))
+    
+    # Calculate charging efficiency
+    state_of_charge = 100 * (battery_current_energy / battery_capacity_total)
+    curr_charge_efficiency = np.where(state_of_charge <= 85, a['battery_charging_efficiency'],
+                                      a['battery_charging_efficiency'] * (1 - np.exp((state_of_charge - 85) / 4) / 120))
+    
+    # Calculate discharging efficiency
+    curr_discharge_efficiency = a['battery_discharging_efficiency']
+    
+    # Calculate electricity prices
+    elec_prices = np.where((np.arange(len(load_profile)) > a['high_period_start']) &
+                           (np.arange(len(load_profile)) <= a['high_period_end']),
+                           a['time_of_use_tariffs_high'], a['time_of_use_tariffs_low'])
+    elec_prices *= (1 + a['inflation rate']) ** (np.arange(len(load_profile)) // 8760)
+    
+    # Calculate trickle charging rate
+    trickle_charging_rate = np.where((np.arange(len(load_profile)) % 24 < 5) |
+                                     (np.arange(len(load_profile)) % 24 > 20),
+                                     a['battery_trickle_charging_rate'], 0)
+    
+    # Calculate energy throughput limits
+    battery_max_energy_throughput = a['battery_cycles'] * battery_capacity_total
+    battery_energy_throughput = 0
+    
+    # Calculate energy flows
+    excess_pv_production = net_load_profile < 0
+    excess_ev_load = net_load_profile > 0
+    no_excess = net_load_profile == 0
+    
+    energy_drawn_from_pv = np.minimum(battery_capacity_usable / curr_charge_efficiency,
+                                      np.abs(net_load_profile), battery_power_rating) * excess_pv_production
+    energy_stored_in_battery = energy_drawn_from_pv * curr_charge_efficiency * excess_pv_production
+    battery_current_energy += energy_stored_in_battery
+    
+    energy_discharged_from_battery = np.minimum(battery_current_energy,
+                                                net_load_profile / curr_discharge_efficiency,
+                                                battery_power_rating) * excess_ev_load
+    energy_received_by_load = energy_discharged_from_battery * curr_discharge_efficiency * excess_ev_load
+    battery_current_energy -= energy_discharged_from_battery
+    
+    energy_drawn_from_grid = np.minimum(trickle_charging_rate,
+                                        battery_capacity_usable / curr_charge_efficiency) * no_excess
+    energy_stored_in_battery += energy_drawn_from_grid * curr_charge_efficiency * no_excess
+    battery_current_energy += energy_stored_in_battery
+    
+    # Update battery energy throughput
+    battery_energy_throughput += energy_stored_in_battery
+    
+    # Useful
+    battery_energy_draw_from_pv_profile = energy_drawn_from_pv
+    load_energy_received_from_battery_profile = energy_received_by_load
+    
+    # Cost
+    cost_of_charging = elec_prices * energy_drawn_from_grid
+    cost_of_trickle_charging = np.maximum(cost_of_charging, 0)
+    
+    pv_with_battery_output_profile = pv_output_profile + load_energy_received_from_battery_profile - battery_energy_draw_from_pv_profile
+    
+    return pv_with_battery_output_profile, battery_energy_throughput, cost_of_trickle_charging.sum()
+
+
+def simulate_battery_storage_new(pv_output_profile, battery_capacity_total, battery_energy_throughput, battery_max_energy_throughput, a):
     
     # Net load profile
     net_load_profile = [load - pv for load,pv in zip(list(a['load_profile']),pv_output_profile)] # Calculate the net load profile
