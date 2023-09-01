@@ -6,7 +6,7 @@ import numpy as np
 # cost_per_wh = cost_per_battery/size
 
 # convert to kWh
-cost_per_kwh = 300 # $/kWh 
+cost_per_kwh = 400 # $/kWh 
 
 annual_maintenance_cost = 10 # $/kW
 
@@ -17,7 +17,7 @@ duration = 2 # hours (for max power draw
 depth_of_discharge = 0.90 # %
 
 # lifetime ratings
-max_cycles = 10000 # num cycles battery can run through in lifetime
+max_cycles = 6000 # num cycles battery can run through in lifetime
 end_of_life_perc = 0.80 # percent of original capacity left at end of life 
 
 # Residual value

@@ -58,7 +58,7 @@ a = {
     # Solar PV Profile 
     'annual_capacity_factor': annual_capacity_factor,
     # EV charging load 
-    'load_profile': annual_100_perc_ev,
+    'load_profile': annual_50_perc_ev,
     # PV costs 
     'pv_cost_per_kw': solar.cost_per_kw,
     'pv_annual_maintenance_cost': solar.annual_maintenance_cost,
@@ -81,7 +81,7 @@ a = {
     'battery_max_cycles': battery.max_cycles,
     'battery_end_of_life_perc': battery.end_of_life_perc,
     'battery_trickle_charging_rate': battery.trickle_charging_rate,
-    'enable_trickle_charging': True,
+    'enable_trickle_charging': False,
     'repurchase_battery': False,
     'limit_battery_repurchases': True,
     # Energy costs and schedule 
