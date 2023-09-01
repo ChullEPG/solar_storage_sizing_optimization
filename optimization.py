@@ -186,8 +186,8 @@ def objective_function_with_solar_and_battery_degradation_loan_v2(x, a):
 # With loan using CRF and load shedding overly capability
 def objective_function_with_solar_and_battery_degradation_loan_v3(x, a):
     
-    pv_capacity, battery_capacity =x
-    
+    pv_capacity = x[0]
+    battery_capacity = x[1]
     # Capital Cost of Investment 
     pv_capital_cost = economic_analysis.calculate_pv_capital_cost(pv_capacity, a)
     battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity
@@ -202,14 +202,21 @@ def objective_function_with_solar_and_battery_degradation_loan_v3(x, a):
     repurchase_battery = a['repurchase_battery'] # Initialize battery repurchase bool 
     battery_max_energy_throughput = generate_data.get_battery_max_energy_throughput(battery_capacity, a) # Get max battery energy throughput
     
-    net_cash_flows = [] # Initialize array to hold net cash flows 
+    net_cash_flows = np.zeros(a['Rproj']) # Initialize array to hold net cash flows 
+    
+    battery_exists = True # true until run out of repurchases
         
-    for year in tqdm(range(a['Rproj']), desc="Optimizing", ncols=100, miniters = 0, bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}"):
+    for year in tqdm(range(a['Rproj']), desc="Optimizing", ncols=100, miniters = 0, bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}", disable = True):
     #for year in range(a['Rproj']):
         
         # Update PV and battery capacity after degradation   
         usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
-        usable_battery_capacity = calculations.get_usable_battery_capacity(battery_capacity, battery_energy_throughput, battery_max_energy_throughput, year, a)
+        
+        if battery_exists:
+            usable_battery_capacity = calculations.get_usable_battery_capacity(battery_capacity, battery_energy_throughput, battery_max_energy_throughput, year, a)
+            
+        print("battery exists", battery_exists)
+        print("battery cap", usable_battery_capacity)
                 
         # Generate PV Output profile 
         pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
@@ -234,6 +241,10 @@ def objective_function_with_solar_and_battery_degradation_loan_v3(x, a):
             if repurchase_battery: 
                 battery_repurchase_cost = a['battery_cost_per_kWh'] * battery_capacity / (1 + a['discount rate'])**year # rebuy cost (discounted)
                 battery_residual_value = a['battery_residual_value_factor'] * a['battery_cost_per_kWh'] * battery_capacity
+                
+                years_left = a['Rproj'] - year
+                crf_repurchase = (a['interest rate'] * (1 + a['interest rate'])**years_left) / ((1 + a['interest rate'])**years_left - 1)
+                loan_installment += crf_repurchase * battery_repurchase_cost
 
                 usable_battery_capacity = battery_capacity # reset usable battery capacity
                 battery_energy_throughput = 0 # reset battery energy used
@@ -244,6 +255,9 @@ def objective_function_with_solar_and_battery_degradation_loan_v3(x, a):
             else:
                 pv_with_battery_output_profile = pv_output_profile 
                 battery_maintenance_cost = 0
+                battery_exists = False
+                usable_battery_capacity = 0
+                
                 
 
         loadshedding_schedule = a['load_shedding_schedule']
@@ -255,29 +269,18 @@ def objective_function_with_solar_and_battery_degradation_loan_v3(x, a):
         
         # Profile of kWh that would be lost to load shedding WITH solar and battery
         net_load_lost_to_loadshedding = np.array([net_load_profile[i] if is_shedding and net_load_profile[i] > 0 else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
-        
-        # Find the load profiles that are net of load shedding - this is the load you neeed to charge $ for [in reality you will need an entirely new schedule] 
         gross_load_minus_loadshedding = a['load_profile'] - gross_load_lost_to_loadshedding
         net_load_minus_loadshedding = net_load_profile - net_load_lost_to_loadshedding 
-        
-
-            # Value of kWh saved from loadshedding BY solar + battery!  [makes above not needed?]
         value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding_v2(year, saved_free_kWh, a)
         
         load_profile = gross_load_minus_loadshedding
         net_load_profile = net_load_minus_loadshedding 
-        # else:
-        #     value_of_charging_saved_by_pv_from_loadshedding = np.zeros(1)
-        #     load_profile = a['load_profile']
-        #     net_load_profile = a['load_profile'] - pv_with_battery_output_profile
 
-            
-         
-        
+                    
         energy_savings = economic_analysis.get_energy_savings(cost_of_trickle_charging, load_profile, net_load_profile, year, a) + value_of_charging_saved_by_pv_from_loadshedding.sum()
         maintenance_costs = (pv_maintenance_cost + battery_maintenance_cost) * (1 + a['inflation rate'])**(year - 1)
         
-        net_cash_flows.append(energy_savings - loan_installment - maintenance_costs - battery_repurchase_cost + battery_residual_value)
+        net_cash_flows[year] = energy_savings - loan_installment - maintenance_costs - battery_residual_value
         
         
         #if in final year
@@ -287,9 +290,9 @@ def objective_function_with_solar_and_battery_degradation_loan_v3(x, a):
     
     npv = economic_analysis.calculate_npv(initial_investment = 0, cash_flows = net_cash_flows, discount_rate = a['discount rate'])
    # breakpoint()
-    print("PV capacity:", round(pv_capacity))
-    print("Battery capacity:", round(battery_capacity))
-    print("NPV: $", round(npv))
+    # print("PV capacity:", round(pv_capacity))
+    # print("Battery capacity:", round(battery_capacity))
+    # print("NPV: $", round(npv))
     
     return -npv 
 
@@ -333,7 +336,7 @@ def objective_function_with_solar_and_battery_degradation_loan_v4(x, a):
         # Check if the battery is still alive 
         if battery_energy_throughput < battery_max_energy_throughput: 
 
-            pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, usable_battery_capacity,  battery_energy_throughput, battery_max_energy_throughput, a)
+            pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, usable_battery_capacity,  battery_energy_throughput, battery_max_energy_throughput, a)
             
             battery_energy_throughput = battery_throughput # update total battery energy throughput 
             
@@ -344,7 +347,7 @@ def objective_function_with_solar_and_battery_degradation_loan_v4(x, a):
 
                 usable_battery_capacity = battery_capacity # reset usable battery capacity
                 battery_energy_throughput = 0 # reset battery energy used
-                pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, battery_capacity, battery_energy_throughput,battery_max_energy_throughput,a)
+                pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, battery_capacity, battery_energy_throughput,battery_max_energy_throughput,a)
                 battery_energy_throughput = battery_throughput
                 if a['limit_battery_repurchases']:
                     repurchase_battery = False

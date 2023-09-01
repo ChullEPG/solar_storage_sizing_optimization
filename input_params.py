@@ -58,7 +58,7 @@ a = {
     # Solar PV Profile 
     'annual_capacity_factor': annual_capacity_factor,
     # EV charging load 
-    'load_profile': annual_50_perc_ev,
+    'load_profile': annual_100_perc_ev,
     # PV costs 
     'pv_cost_per_kw': solar.cost_per_kw,
     'pv_annual_maintenance_cost': solar.annual_maintenance_cost,
@@ -102,7 +102,7 @@ a = {
     'kwh_km': market.kwh_km,
     # Load shedding 
     'load_shedding_bool': False,
-    'load_shedding_schedule': ls_annual_empty,
+    'load_shedding_schedule': ls_annual_2,
     # Loan model
   #  'loan_payback_period': market.loan_payback_period,
     # Battery cell specs

@@ -12,6 +12,7 @@ def get_usable_battery_capacity(battery_capacity, battery_energy_throughput, bat
     Exponential degradation of battery capacity
     '''
     usable_battery_capacity = battery_capacity - (battery_capacity * (battery_energy_throughput / battery_max_energy_throughput) * (1 - a['battery_end_of_life_perc']))
+    print("usable batt cap:", usable_battery_capacity)
     return usable_battery_capacity
 
 def get_usable_battery_capacity_v2(battery_capacity, battery_energy_throughput, battery_max_energy_throughput, year, a):

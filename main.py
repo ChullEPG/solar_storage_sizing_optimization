@@ -17,7 +17,7 @@ annual_100_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_100_perc_ev.
 # Constrain PV and Battery Capacities to be between 1 and 100 kW and kWh respectively
 bounds = [(0,1000), (0,1000)]
 initial_guess = [500, 500]
-opt_method = 'COBYLA' 
+opt_method = 'SLSQP' 
 
 
 ## store results 

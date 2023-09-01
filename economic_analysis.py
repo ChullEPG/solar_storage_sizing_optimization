@@ -152,7 +152,7 @@ def calculate_pv_capital_cost(pv_capacity, a):
 
 def calculate_crf(a):
     # Calculate annual payments   
-    return (a['interest rate'] * (1 + r)**a['Rproj']) / ((1 + a['interest rate'])**a['Rproj'] - 1)
+    return (a['interest rate'] * (1 + a['interest rate'])**a['Rproj']) / ((1 + a['interest rate'])**a['Rproj'] - 1)
 
 
 ########## Payback period ############
@@ -497,9 +497,7 @@ def get_cost_of_missed_passengers_from_loadshedding_v2(year: int, kWh_affected_b
 
 
 
-    # Find cost of doing with ICE
-    kwh_L = a['kwh_km'] * (1/a['L_km']) # kWh/L
-    cost_of_ICE_operation_per_kwh = a['cost_diesel'] / kwh_L # $/kWh
+    
     
     # Obtain energy costs for each time period of the day
     peak_hours = a['time_periods']['peak_hours']
@@ -512,6 +510,9 @@ def get_cost_of_missed_passengers_from_loadshedding_v2(year: int, kWh_affected_b
     
     
     for hour, kWh in enumerate(kWh_affected_by_loadshedding):
+        # Find cost of doing with ICE
+        kwh_L = a['kwh_km'] * (1/a['L_km'])  # kWh/L
+        cost_of_ICE_operation_per_kwh = (a['cost_diesel'] / kwh_L) * (1 + a['inflation rate'])**(year - 1) # $/kWh
         
         curr_hour_of_week = hour % 168 
         curr_hour_of_day = hour % 24
