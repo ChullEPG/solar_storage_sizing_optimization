@@ -111,17 +111,20 @@ if __name__ == "__main__":
     
 
     
-    scenario_names = ["25% No LS", "50\% No LS", '75% No LS', '100% No LS', 
-                      '25% LS1', '50% LS1', '75% LS1', '100% LS1']
+    scenario_names = ["25% No LS", "50% No LS", '75% No LS', '100% No LS', 
+                      "25% LS1", '50% LS1', '75% LS1', '100% LS1']                                
     
     load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
-    load_profile_list_ls_1 = [annual_25_perc_ls_1, annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
+    load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
     # load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
     # load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
     
     
     load_profile_list = load_profile_list + load_profile_list_ls_1
     grid_load_shedding_schedules = [input.ls_annual_empty, input.ls_annual_1]
+    
+    #load_profile_list = [annual_25_perc_ev, annual_25_perc_ls_1]
+    #scenario_names = ["25% No LS", '25% LS1']
     
     
     solar_costs = [500, 600, 700, 800, 900]
@@ -133,7 +136,7 @@ if __name__ == "__main__":
     a = input.a 
     pool = mp.Pool(processes=mp.cpu_count())
 
-    total_combinations = len(load_profile_list) * len(solar_costs) * len(battery_costs)
+    total_combinations = len(load_profile_list) * len(solar_costs) * len(battery_costs) * 1.5 #len(grid_load_shedding_schedules)
     combinations = []
 
     for idx, load_profile in enumerate(load_profile_list):
@@ -156,15 +159,15 @@ if __name__ == "__main__":
         
     for idx, result in enumerate(results):
         solar_cost, battery_cost, load_profile, grid_load_shedding_schedule, scenario_name, _, _, = combinations[idx]
-        optimal_pv_capacity, optimal_battery_capacity, npv_value, execution_time, scenario_name, load_shedding_scenario = result
+        optimal_pv_capacity, optimal_battery_capacity, npv_value, execution_time, scenario_name, grid_load_shedding_scenario = result
         
         #Make directory scenario_name if doesn't exist
          
-        if not os.path.exists(f"../results/{load_shedding_scenario}/{scenario_name}"):   
-            os.makedirs(f"../results/{load_shedding_scenario}/{scenario_name}")
+        if not os.path.exists(f"../results/{grid_load_shedding_scenario}/{scenario_name}"):   
+            os.makedirs(f"../results/{grid_load_shedding_scenario}/{scenario_name}")
             
         # Create the file name
-        file_name = f"../results/{load_shedding_scenario}/{scenario_name}/solar={solar_cost}_battery={battery_cost}.txt"
+        file_name = f"../results/{grid_load_shedding_scenario}/{scenario_name}/solar={solar_cost}_battery={battery_cost}.txt"
         
         # Write the results to the file
         with open(file_name, "w") as f2:
@@ -195,8 +198,7 @@ if __name__ == "__main__":
     print("Total program execution time:", total_execution_time)
     # print number of true observations in a['load_shedding_schdule'] array
     
-    print(f"Num LS hours: {ls_sched}")
-    
+
     
 
 ####### OPTIMIZE SYSTEM WITH COBYLA / SLSQP AND VARYING INITIAL GUESSES ######
