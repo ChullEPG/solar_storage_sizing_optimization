@@ -1,6 +1,8 @@
 import time
+import os
 import multiprocessing as mp
 import optimization
+import economic_analysis
 from constraints import cons  
 import input_params as input 
 import time 
@@ -12,22 +14,8 @@ from tqdm import tqdm
 
 
 
-# # Constrain PV and Battery Capacities to be between 1 and 100 kW and kWh respectively
-# bounds = [(0,1000), (0,1000)]
-# initial_guess = [100, 100]
-# opt_method = 'DE' 
-
-
-# ## store results 
-# pv_capacities = []
-# battery_capacities = []
-# npvs = []
-# times = []
-
-# start_time = time.time()
-
 ###### OPTIMIZE SYSTEM varying load profile ##########
-def optimize_system(load_profile, bounds, a):
+def optimize_system(load_profile, load_profile_name, bounds, a):
     this_run_start_time = time.time()
     a['load_profile'] = load_profile
 
@@ -45,36 +33,43 @@ def optimize_system(load_profile, bounds, a):
     this_run_end_time = time.time()
     this_run_time = (this_run_end_time - this_run_start_time) / 60
 
-    return optimal_pv_capacity, optimal_battery_capacity, -max_npv, this_run_time
+    return optimal_pv_capacity, optimal_battery_capacity, -max_npv, this_run_time, load_profile_name
 
 
 ###### OPTIMIZE SYSTEM varying load profile with COBYLA ##########
-def optimize_system_cobyla(load_profile, bounds, initial_guess, a):
-    this_run_start_time = time.time()
-    a['load_profile'] = load_profile
+# def optimize_system_cobyla(load_profile, bounds, initial_guess, a):
+#     this_run_start_time = time.time()
+#     a['load_profile'] = load_profile
 
-    # Run 
-    result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan_v3, x0 = initial_guess, args = (a,), bounds=bounds, constraints = cons , method= 'COBYLA')
+#     # Run 
+#     result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan_v3, x0 = initial_guess, args = (a,), bounds=bounds, constraints = cons , method= 'COBYLA')
      
 
-    # Extract results         
-    optimal_pv_capacity = result.x[0]
-    optimal_battery_capacity = result.x[1]
+#     # Extract results         
+#     optimal_pv_capacity = result.x[0]
+#     optimal_battery_capacity = result.x[1]
 
-    # Convert to USD
-    max_npv = result.fun
+#     # Convert to USD
+#     max_npv = result.fun
 
-    this_run_end_time = time.time()
-    this_run_time = (this_run_end_time - this_run_start_time) / 60
+#     this_run_end_time = time.time()
+#     this_run_time = (this_run_end_time - this_run_start_time) / 60
 
-    return optimal_pv_capacity, optimal_battery_capacity, -max_npv, this_run_time
+#     return optimal_pv_capacity, optimal_battery_capacity, -max_npv, this_run_time
 
 ###### OPTIMIZE SYSTEM varying load profile and solar and storage ##########
-def optimize_system_v2(solar_cost, battery_cost, load_profile, bounds, a):
+def optimize_system_v2(solar_cost, battery_cost, load_profile, grid_load_shedding_schedule, scenario_name, bounds, a):
     this_run_start_time = time.time()
     a['load_profile'] = load_profile
     a['pv_cost_per_kw'] = solar_cost
     a['battery_cost_per_kWh'] = battery_cost
+    a['load_shedding_schedule'] = grid_load_shedding_schedule
+  
+    if sum(grid_load_shedding_schedule) > 0:
+        load_shedding_scenario = "Grid LS on"
+    else:
+        load_shedding_scenario = "Grid LS off"
+    
     initial_guess = [500, 500]
 
     # Run 
@@ -91,7 +86,118 @@ def optimize_system_v2(solar_cost, battery_cost, load_profile, bounds, a):
     this_run_end_time = time.time()
     this_run_time = (this_run_end_time - this_run_start_time) / 60
 
-    return optimal_pv_capacity, optimal_battery_capacity, -max_npv, this_run_time
+    return optimal_pv_capacity, optimal_battery_capacity, -max_npv, this_run_time, scenario_name, load_shedding_scenario
+
+
+
+###############  STARMAP #2  #################### 
+if __name__ == "__main__":
+    
+    start_time = time.time()
+    
+    
+    print("ALL LOAD PROFILES WITH SOLAR AND BATT SENSITIVITY")
+    
+    annual_25_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_25_perc_ev.txt")
+    annual_50_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_50_perc_ev.txt")
+    annual_75_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_75_perc_ev.txt")
+    annual_100_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_100_perc_ev.txt")
+    
+    annual_25_perc_ls_1 = np.loadtxt(f"processed_ev_schedule_data/25_perc/annual_ls_1.txt") 
+    annual_50_perc_ls_1 = np.loadtxt(f"processed_ev_schedule_data/50_perc/annual_ls_1.txt") 
+    annual_75_perc_ls_1 = np.loadtxt(f"processed_ev_schedule_data/75_perc/annual_ls_1.txt") 
+    annual_100_perc_ls_1 = np.loadtxt(f"processed_ev_schedule_data/100_perc/annual_ls_1.txt") 
+    
+    
+
+    
+    scenario_names = ["25% No LS", "50\% No LS", '75% No LS', '100% No LS', 
+                      '25% LS1', '50% LS1', '75% LS1', '100% LS1']
+    
+    load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
+    load_profile_list_ls_1 = [annual_25_perc_ls_1, annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
+    # load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
+    # load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
+    
+    
+    load_profile_list = load_profile_list + load_profile_list_ls_1
+    grid_load_shedding_schedules = [input.ls_annual_empty, input.ls_annual_1]
+    
+    
+    solar_costs = [500, 600, 700, 800, 900]
+    battery_costs = [100, 200, 300, 400, 500]
+   
+    
+
+    bounds = [(0,1000), (0,1000)]
+    a = input.a 
+    pool = mp.Pool(processes=mp.cpu_count())
+
+    total_combinations = len(load_profile_list) * len(solar_costs) * len(battery_costs)
+    combinations = []
+
+    for idx, load_profile in enumerate(load_profile_list):
+        for jdx, grid_load_shedding_schedule in enumerate(grid_load_shedding_schedules): 
+            # If it IS an EV schedule that is planned around load shedding, then don't use grid load shedding array
+            if ("No LS" not in scenario_names[idx]) and (grid_load_shedding_schedule.sum() > 0):
+                        continue 
+            # if it is an unplanned load shedding EV schedule, then we can include grid load shedding array
+            else:
+                for solar_cost in solar_costs:
+                    for battery_cost in battery_costs:
+                        combinations.append((solar_cost, battery_cost, load_profile, grid_load_shedding_schedule, scenario_names[idx], bounds, a))
+
+    # Use starmap to parallelize the optimization process
+    results = list(tqdm(pool.starmap(optimize_system_v2, combinations), total=total_combinations, desc="Progress"))
+
+    pool.close()
+    pool.join()
+    
+        
+    for idx, result in enumerate(results):
+        solar_cost, battery_cost, load_profile, grid_load_shedding_schedule, scenario_name, _, _, = combinations[idx]
+        optimal_pv_capacity, optimal_battery_capacity, npv_value, execution_time, scenario_name, load_shedding_scenario = result
+        
+        #Make directory scenario_name if doesn't exist
+         
+        if not os.path.exists(f"../results/{load_shedding_scenario}/{scenario_name}"):   
+            os.makedirs(f"../results/{load_shedding_scenario}/{scenario_name}")
+            
+        # Create the file name
+        file_name = f"../results/{load_shedding_scenario}/{scenario_name}/solar={solar_cost}_battery={battery_cost}.txt"
+        
+        # Write the results to the file
+        with open(file_name, "w") as f2:
+            f2.write(f"Optimal PV Capacity: {optimal_pv_capacity} kW\n")
+            f2.write(f"Optimal Battery Capacity: {optimal_battery_capacity} kWh\n")
+            f2.write(f"NPV: {npv_value}\n")
+            investment_cost = economic_analysis.calculate_pv_capital_cost(optimal_pv_capacity, a) + (a['battery_cost_per_kWh'] * optimal_battery_capacity)
+            f2.write(f"Investment cost: ${investment_cost}\n") 
+        
+        # Print the results
+        print(f"Combination {idx + 1}/{total_combinations}:")
+        print("Solar Cost:", solar_cost)
+        print("Battery Cost:", battery_cost)
+        print("Scenario:", scenario_name)  # You might want to print the name or other information about the load profile
+        print("Optimal PV Capacity:", optimal_pv_capacity, 'kW')
+        print("Optimal Battery Capacity:", optimal_battery_capacity, 'kWh')
+        print("NPV:", npv_value)
+        print("Investment cost: $", investment_cost) 
+        print("Execution Time (minutes):", execution_time)
+        print()
+    
+
+            
+    end_time = time.time()
+    
+    total_execution_time = (end_time - start_time)/60
+    
+    print("Total program execution time:", total_execution_time)
+    # print number of true observations in a['load_shedding_schdule'] array
+    
+    print(f"Num LS hours: {ls_sched}")
+    
+    
 
 ####### OPTIMIZE SYSTEM WITH COBYLA / SLSQP AND VARYING INITIAL GUESSES ######
 
@@ -392,60 +498,7 @@ def optimize_system_v2(solar_cost, battery_cost, load_profile, bounds, a):
 
 
 
-###############  STARMAP #2  #################### 
-if __name__ == "__main__":
-    
-    start_time = time.time()
-    
-    print("ALL LOAD PROFILES WITH SOLAR AND BATT SENSITIVITY")
-    
-    annual_25_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_25_perc_ev.txt")
-    annual_50_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_50_perc_ev.txt")
-    annual_75_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_75_perc_ev.txt")
-    annual_100_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_100_perc_ev.txt")
-    
-    load_profile_names = ["25% pen", "50\% pen", '75% pen', '100% pen']
-    load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
-    solar_costs = [500, 600, 700, 800]
-    battery_costs = [300, 400, 500, 600]
-    bounds = [(0,1000), (0,1000)]# Define your bounds here
-    a = input.a # Define your 'a' here
 
-    pool = mp.Pool(processes=mp.cpu_count())
-
-    total_combinations = len(load_profile_list) * len(solar_costs) * len(battery_costs)
-    combinations = []
-
-    for idx, load_profile in enumerate(load_profile_list):
-        for solar_cost in solar_costs:
-            for battery_cost in battery_costs:
-                combinations.append((solar_cost, battery_cost, load_profile, bounds, a))
-
-    # Use starmap to parallelize the optimization process
-    results = list(tqdm(pool.starmap(optimize_system_v2, combinations), total=total_combinations, desc="Progress"))
-
-    pool.close()
-    pool.join()
     
     
-    for idx, result in enumerate(results):
-        solar_cost, battery_cost, load_profile, _, _ = combinations[idx]
-        optimal_pv_capacity, optimal_battery_capacity, npv_value, execution_time = result
-
-        # Print the results
-        print(f"Combination {idx + 1}/{total_combinations}:")
-        print("Solar Cost:", solar_cost)
-        print("Battery Cost:", battery_cost)
-        print("Load Profile:", load_profile.sum())  # You might want to print the name or other information about the load profile
-        print("Optimal PV Capacity:", optimal_pv_capacity, 'kW')
-        print("Optimal Battery Capacity:", optimal_battery_capacity, 'kWh')
-        print("NPV:", npv_value)
-        print("Execution Time (minutes):", execution_time)
-        print()
-        
-    end_time =time.time()
-    
-    total_execution_time = (end_time - start_time)/60
-    
-    print("Total program execution time:", total_execution_time)
     

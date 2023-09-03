@@ -562,7 +562,7 @@ def simulate_battery_storage_v4(pv_output_profile, battery_capacity_total, batte
                         cost_of_charging = elec_price * energy_drawn_from_grid 
                         
                         # Update battery state 
-                        battery_current_energy = battery_current_energy + energy_stored_in_battery
+                        battery_current_energy = battery_current_energy + energy_stored_in_battery  
                         
                 
             # Update battery energy throughput 

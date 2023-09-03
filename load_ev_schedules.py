@@ -50,22 +50,22 @@ np.savetxt(f"processed_ev_schedule_data/annual_100_perc_ev.txt", annual_100_perc
 ##################################### 25 % penetration w/ load shedding #############################################################
 
 # Processing Weekly schedules (note- only taking first day of week for each of these so that can append them together in desired order)
-mon_fri_ls_1_25_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/m-f/ls_pattern=0_ev=19_ice=28.txt')]*5, ignore_index = True)[0:1440]
-mon_fri_ls_2_25_perc_pen = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/m-f/ls_pattern=1_ev=19_ice=28.txt')]*5, ignore_index = True)[0:1440]
-mon_fri_ls_3_25_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/m-f/ls_pattern=2_ev=19_ice=28.txt')]*5, ignore_index = True)[0:1440]
-mon_fri_ls_4_25_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/m-f/ls_pattern=3_ev=19_ice=28.txt.txt')]*5, ignore_index = True)[0:1440]
+mon_fri_ls_1_25_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/m-f/ls_pattern=0.txt')]*5, ignore_index = True)[0:1440]
+mon_fri_ls_2_25_perc_pen = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/m-f/ls_pattern=1.txt')]*5, ignore_index = True)[0:1440]
+mon_fri_ls_3_25_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/m-f/ls_pattern=2.txt')]*5, ignore_index = True)[0:1440]
+mon_fri_ls_4_25_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/m-f/ls_pattern=3.txt')]*5, ignore_index = True)[0:1440]
 
 # Processing Saturday schedules 
-sat_ls_1_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sat/ls_pattern=0_ev=19_ice=28.txt')
-sat_ls_2_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sat/ls_pattern=1_ev=19_ice=28.txt')
-sat_ls_3_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sat/ls_pattern=2_ev=19_ice=28.txt')
-sat_ls_4_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sat/ls_pattern=3_ev=19_ice=28.txt')
+sat_ls_1_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sat/ls_pattern=0.txt')
+sat_ls_2_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sat/ls_pattern=1.txt')
+sat_ls_3_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sat/ls_pattern=2.txt')
+sat_ls_4_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sat/ls_pattern=3.txt')
 
 # Processing Sunday schedules
-sun_ls_1_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sun/ls_pattern=0_ev=19_ice=28.txt')
-sun_ls_2_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sun/ls_pattern=1_ev=19_ice=28.txt')
-sun_ls_3_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sun/ls_pattern=2_ev=19_ice=28.txt')
-sun_ls_4_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sun/ls_pattern=3_ev=19_ice=28.txt')
+sun_ls_1_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sun/ls_pattern=0.txt')
+sun_ls_2_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sun/ls_pattern=1.txt')
+sun_ls_3_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sun/ls_pattern=2.txt')
+sun_ls_4_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/19/sun/ls_pattern=3.txt')
 
 # Concatenating into full weekly charging profiles
 weekly_ls_1_25_perc_pen = pd.concat([mon_fri_ls_1_25_perc_pen, mon_fri_ls_2_25_perc_pen, mon_fri_ls_3_25_perc_pen, mon_fri_ls_4_25_perc_pen, mon_fri_ls_1_25_perc_pen, sat_ls_2_25_perc_pen, sun_ls_3_25_perc_pen], ignore_index = True)
@@ -87,6 +87,7 @@ annual_ls_1_25_perc_pen = downsample_minutely_to_hourly(annual_ls_1_25_perc_pen)
 
 
 # write files
+np.savetxt(f"processed_ev_schedule_data/25_perc/weekly_ls_1.txt", weekly_ls_1_25_perc_pen)
 np.savetxt(f"processed_ev_schedule_data/25_perc/annual_ls_1.txt", annual_ls_1_25_perc_pen)
 
 ######################################################################################################################################################
@@ -98,7 +99,7 @@ np.savetxt(f"processed_ev_schedule_data/25_perc/annual_ls_1.txt", annual_ls_1_25
 mon_fri_ls_1_50_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/38/m-f/ls_pattern=0.txt')]*5, ignore_index = True)[0:1440]
 mon_fri_ls_2_50_perc_pen = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/38/m-f/ls_pattern=1.txt')]*5, ignore_index = True)[0:1440]
 mon_fri_ls_3_50_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/38/m-f/ls_pattern=2.txt')]*5, ignore_index = True)[0:1440]
-mon_fri_ls_4_50_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/38/m-f/ls_pattern=3.txt.txt')]*5, ignore_index = True)[0:1440]
+mon_fri_ls_4_50_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/38/m-f/ls_pattern=3.txt')]*5, ignore_index = True)[0:1440]
 
 # Processing Saturday schedules 
 sat_ls_1_50_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/38/sat/ls_pattern=0.txt')
@@ -132,6 +133,7 @@ annual_ls_1_50_perc_pen = downsample_minutely_to_hourly(annual_ls_1_50_perc_pen)
 
 
 # write files
+np.savetxt(f"processed_ev_schedule_data/50_perc/weekly_ls_1.txt", weekly_ls_1_50_perc_pen)
 np.savetxt(f"processed_ev_schedule_data/50_perc/annual_ls_1.txt", annual_ls_1_50_perc_pen)
 
 
@@ -146,7 +148,7 @@ np.savetxt(f"processed_ev_schedule_data/50_perc/annual_ls_1.txt", annual_ls_1_50
 mon_fri_ls_1_75_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/57/m-f/ls_pattern=0.txt')]*5, ignore_index = True)[0:1440]
 mon_fri_ls_2_75_perc_pen = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/57/m-f/ls_pattern=1.txt')]*5, ignore_index = True)[0:1440]
 mon_fri_ls_3_75_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/57/m-f/ls_pattern=2.txt')]*5, ignore_index = True)[0:1440]
-mon_fri_ls_4_75_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/57/m-f/ls_pattern=3.txt.txt')]*5, ignore_index = True)[0:1440]
+mon_fri_ls_4_75_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/57/m-f/ls_pattern=3.txt')]*5, ignore_index = True)[0:1440]
 
 # Processing Saturday schedules 
 sat_ls_1_75_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/57/sat/ls_pattern=0.txt')
@@ -180,6 +182,7 @@ annual_ls_1_75_perc_pen = downsample_minutely_to_hourly(annual_ls_1_75_perc_pen)
 
 
 # write files
+np.savetxt(f"processed_ev_schedule_data/75_perc/weekly_ls_1.txt", weekly_ls_1_75_perc_pen)
 np.savetxt(f"processed_ev_schedule_data/75_perc/annual_ls_1.txt", annual_ls_1_75_perc_pen)
 
 
@@ -195,7 +198,7 @@ np.savetxt(f"processed_ev_schedule_data/75_perc/annual_ls_1.txt", annual_ls_1_75
 mon_fri_ls_1_100_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/76/m-f/ls_pattern=0.txt')]*5, ignore_index = True)[0:1440]
 mon_fri_ls_2_100_perc_pen = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/76/m-f/ls_pattern=1.txt')]*5, ignore_index = True)[0:1440]
 mon_fri_ls_3_100_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/76/m-f/ls_pattern=2.txt')]*5, ignore_index = True)[0:1440]
-mon_fri_ls_4_100_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/76/m-f/ls_pattern=3.txt.txt')]*5, ignore_index = True)[0:1440]
+mon_fri_ls_4_100_perc_pen  = pd.concat([process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/76/m-f/ls_pattern=3.txt')]*5, ignore_index = True)[0:1440]
 
 # Processing Saturday schedules 
 sat_ls_1_100_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2hr_ls_mixed_fleet_all_percentages/76/sat/ls_pattern=0.txt')
@@ -229,6 +232,7 @@ annual_ls_1_100_perc_pen = downsample_minutely_to_hourly(annual_ls_1_100_perc_pe
 
 
 # write files
+np.savetxt(f"processed_ev_schedule_data/100_perc/weekly_ls_1.txt", weekly_ls_1_100_perc_pen)
 np.savetxt(f"processed_ev_schedule_data/100_perc/annual_ls_1.txt", annual_ls_1_100_perc_pen)
 
 

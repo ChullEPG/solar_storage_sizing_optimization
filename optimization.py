@@ -215,9 +215,6 @@ def objective_function_with_solar_and_battery_degradation_loan_v3(x, a):
         if battery_exists:
             usable_battery_capacity = calculations.get_usable_battery_capacity(battery_capacity, battery_energy_throughput, battery_max_energy_throughput, year, a)
             
-        print("battery exists", battery_exists)
-        print("battery cap", usable_battery_capacity)
-                
         # Generate PV Output profile 
         pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
         
@@ -289,10 +286,10 @@ def objective_function_with_solar_and_battery_degradation_loan_v3(x, a):
             net_cash_flows[-1] += a['solar_residual_value_factor'] * a['pv_cost_per_kw'] * pv_capacity        
     
     npv = economic_analysis.calculate_npv(initial_investment = 0, cash_flows = net_cash_flows, discount_rate = a['discount rate'])
-   # breakpoint()
-    # print("PV capacity:", round(pv_capacity))
-    # print("Battery capacity:", round(battery_capacity))
-    # print("NPV: $", round(npv))
+    # breakpoint()
+    print("PV capacity:", round(pv_capacity))
+    print("Battery capacity:", round(battery_capacity))
+    print("NPV: $", round(npv))
     
     return -npv 
 

@@ -35,19 +35,19 @@ annual_ls_1 = np.loadtxt(f"processed_ev_schedule_data/annual_ls_1.txt")
 
 
 ## Load shedding schedule 
-ls_0 = generate_loadshedding_profile(load_shedding_schedules.ls_0)
 ls_1 = generate_loadshedding_profile(load_shedding_schedules.ls_1)
 ls_2 = generate_loadshedding_profile(load_shedding_schedules.ls_2)
 ls_3 = generate_loadshedding_profile(load_shedding_schedules.ls_3)
+ls_4 = generate_loadshedding_profile(load_shedding_schedules.ls_4)
 
 ## Append them together to make weekly thingy
-ls_order_1 = np.concatenate((ls_2, ls_2, ls_2, ls_2, ls_1, ls_1, ls_1), axis = 0)
-ls_order_2 = np.concatenate((ls_2, ls_2, ls_1, ls_1, ls_1, ls_1, ls_0), axis = 0)
-ls_order_3 = np.concatenate((ls_1, ls_1, ls_1, ls_0, ls_0, ls_0, ls_0), axis = 0)
-# Make annual by repeating it 52 times and adding one to the end 
-ls_annual_1 = np.concatenate([np.tile(ls_order_1, 52), ls_2], axis = 0)
-ls_annual_2 = np.concatenate([np.tile(ls_order_2, 52), ls_2], axis = 0)
-ls_annual_3 = np.concatenate([np.tile(ls_order_2, 52), ls_1], axis = 0)
+ls_order_1 = np.concatenate((ls_1, ls_2, ls_3, ls_4, ls_1, ls_2, ls_3), axis = 0)
+# ls_order_2 = np.concatenate((ls_2, ls_2, ls_1, ls_1, ls_1, ls_1, ls_0), axis = 0)
+# ls_order_3 = np.concatenate((ls_1, ls_1, ls_1, ls_0, ls_0, ls_0, ls_0), axis = 0)
+# Make annual by repeating it 52 times and adding one to the end (MAKE SURE SAME AS IN LOAD_EV_SCHEDULES)
+ls_annual_1 = np.concatenate([np.tile(ls_order_1, 52), ls_1], axis = 0)
+# ls_annual_2 = np.concatenate([np.tile(ls_order_2, 52), ls_2], axis = 0)
+# ls_annual_3 = np.concatenate([np.tile(ls_order_2, 52), ls_1], axis = 0)
 # Empty ls_annual schedule
 ls_annual_empty = np.zeros(8760)
      
@@ -83,8 +83,8 @@ a = {
     'battery_trickle_charging_rate': battery.trickle_charging_rate,
     'battery_lifetime_years': battery.lifetime_years,
     'enable_trickle_charging': False,
-    'repurchase_battery': False,
-    'limit_battery_repurchases': True,
+    'repurchase_battery': True,
+    'limit_battery_repurchases': False,
     # Energy costs and schedule 
     'time_of_use_tariffs_high': market.time_of_use_tariffs_high,
     'time_of_use_tariffs_low': market.time_of_use_tariffs_low,
@@ -102,7 +102,7 @@ a = {
     'kwh_km': market.kwh_km,
     # Load shedding 
     'load_shedding_bool': False,
-    'load_shedding_schedule': ls_annual_2,
+    'load_shedding_schedule': ls_annual_empty,
     # Loan model
   #  'loan_payback_period': market.loan_payback_period,
     # Battery cell specs
