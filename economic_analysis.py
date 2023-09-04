@@ -186,29 +186,21 @@ def calculate_lcoe_pv(optimal_pv_capacity, a):
     return get_pv_net_present_cost(optimal_pv_capacity, a) / get_energy_served_by_pv(optimal_pv_capacity, a)
 
 
-def calculate_lcoe_batt(optimal_pv_capacity, optimal_battery_capacity, a):
-    pv_capacity = x[0]
-    battery_capacity = x[1]
-    # Capital Cost of Investment 
-    pv_capital_cost = economic_analysis.calculate_pv_capital_cost(pv_capacity, a)
+def calculate_lcoe_batt(pv_capacity, battery_capacity, a):
+   
     battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity
-    
-    ## Annual costs
-    loan_installment = economic_analysis.calculate_crf(a) * (pv_capital_cost + battery_capital_cost)
-    pv_maintenance_cost = a['pv_annual_maintenance_cost'] * pv_capacity
+    loan_installment = calculate_crf(a) * (battery_capital_cost)
     battery_maintenance_cost = a['battery_annual_maintenance_cost'] * battery_capacity
+    battery_energy_throughput = 0
+    repurchase_battery = a['repurchase_battery']
+    battery_max_energy_throughput = generate_data.get_battery_max_energy_throughput(battery_capacity, a) 
+    net_cash_flows = np.zeros(a['Rproj']) 
+    battery_exists = True 
     
-    
-    battery_energy_throughput = 0 # Initialize total quantity of battery energy throughput
-    repurchase_battery = a['repurchase_battery'] # Initialize battery repurchase bool 
-    battery_max_energy_throughput = generate_data.get_battery_max_energy_throughput(battery_capacity, a) # Get max battery energy throughput
-    
-    net_cash_flows = np.zeros(a['Rproj']) # Initialize array to hold net cash flows 
-    
-    battery_exists = True # true until run out of repurchases
-        
-    for year in tqdm(range(a['Rproj']), desc="Optimizing", ncols=100, miniters = 0, bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}", disable = True):
-    #for year in range(a['Rproj']):
+    battery_TOTAL_energy_throughput = 0
+    npc = 0
+
+    for year in range(a['Rproj']):
         
         # Update PV and battery capacity after degradation   
         usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
@@ -233,6 +225,9 @@ def calculate_lcoe_batt(optimal_pv_capacity, optimal_battery_capacity, a):
 
             pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, usable_battery_capacity,  battery_energy_throughput, battery_max_energy_throughput, a)
             
+            increase_in_throughput = battery_throughput - battery_energy_throughput
+            battery_TOTAL_energy_throughput += increase_in_throughput
+
             battery_energy_throughput = battery_throughput # update total battery energy throughput 
             
         else:
@@ -242,11 +237,17 @@ def calculate_lcoe_batt(optimal_pv_capacity, optimal_battery_capacity, a):
                 
                 years_left = a['Rproj'] - year
                 crf_repurchase = (a['interest rate'] * (1 + a['interest rate'])**years_left) / ((1 + a['interest rate'])**years_left - 1)
+                
                 loan_installment += crf_repurchase * battery_repurchase_cost
 
                 usable_battery_capacity = battery_capacity # reset usable battery capacity
+                
                 battery_energy_throughput = 0 # reset battery energy used
                 pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, battery_capacity, battery_energy_throughput,battery_max_energy_throughput,a)
+                increase_in_throughput = battery_throughput - battery_energy_throughput
+                battery_TOTAL_energy_throughput += increase_in_throughput
+            
+            
                 battery_energy_throughput = battery_throughput
                 if a['limit_battery_repurchases']:
                     repurchase_battery = False
@@ -256,37 +257,10 @@ def calculate_lcoe_batt(optimal_pv_capacity, optimal_battery_capacity, a):
                 battery_exists = False
                 usable_battery_capacity = 0
                 
-                
+        npc +=  (loan_installment + battery_maintenance_cost - battery_residual_value + cost_of_trickle_charging)/((1 + a['discount rate']) ** year)
 
-        loadshedding_schedule = a['load_shedding_schedule']
-        net_load_profile = a['load_profile'] - pv_with_battery_output_profile
-        gross_load_lost_to_loadshedding = np.array([a['load_profile'][i] if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
-        
-        # Profile of kWh that would have been lost to loadshedding but are saved by the solar + battery generation [these are beneficial, and not to be charged $$ for]
-        saved_free_kWh = [min(pv_with_battery_output_profile[i], gross_load_lost_to_loadshedding[i]) if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)]
-        
-        # Profile of kWh that would be lost to load shedding WITH solar and battery
-        net_load_lost_to_loadshedding = np.array([net_load_profile[i] if is_shedding and net_load_profile[i] > 0 else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
-        gross_load_minus_loadshedding = a['load_profile'] - gross_load_lost_to_loadshedding
-        net_load_minus_loadshedding = net_load_profile - net_load_lost_to_loadshedding 
-        value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding_v2(year, saved_free_kWh, a)
-        
-        load_profile = gross_load_minus_loadshedding
-        net_load_profile = net_load_minus_loadshedding 
-
-                    
-        energy_savings = economic_analysis.get_energy_savings(cost_of_trickle_charging, load_profile, net_load_profile, year, a) + value_of_charging_saved_by_pv_from_loadshedding.sum()
-        maintenance_costs = (pv_maintenance_cost + battery_maintenance_cost) * (1 + a['inflation rate'])**(year - 1)
-        
-        net_cash_flows[year] = energy_savings - loan_installment - maintenance_costs - battery_residual_value
-        
-        
-        #if in final year
-        if year == a['Rproj'] - 1:
-            # add pv residual value to the last cash flow
-            net_cash_flows[-1] += a['solar_residual_value_factor'] * a['pv_cost_per_kw'] * pv_capacity     
     
-    return 
+    return npc/ battery_TOTAL_energy_throughput # lcoe
     
     
 ########## Payback period ############

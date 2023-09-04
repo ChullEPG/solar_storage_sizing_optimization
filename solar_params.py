@@ -5,7 +5,7 @@
 # cost_per_watt = cost_per_panel / panel_wattage
 #cost_per_kw = cost_per_watt * 1000 # R/kW
 
-cost_per_kw = 700 # USD
+cost_per_kw = 500 # USD
 
 # Inverter
 inverter_cost_per_kw = 0.20 * cost_per_kw 
