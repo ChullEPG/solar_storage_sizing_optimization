@@ -123,10 +123,11 @@ if __name__ == "__main__":
     
     #scenario_names = ["25% No LS", "50% No LS", '75% No LS', '100% No LS', 
                     #  "25% LS1", '50% LS1', '75% LS1', '100% LS1']      
-    scenario_names = ["25% LS2", '50% LS2', '75% LS2', '100% LS2',
+    scenario_names = ["25% No LS LS2", "50% No LS LS2", '75% No LS LS2', '100% No LS LS2', 
+                      "25% No LS LS3", "50% No LS LS3", '75% No LS LS3', '100% No LS LS3', 
+                        "25% LS2", '50% LS2', '75% LS2', '100% LS2',
                       "25% LS3", '50% LS3', '75% LS3', '100% LS3']                        
-    
-    #load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
+    load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
     #load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
     load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
     load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
@@ -135,8 +136,8 @@ if __name__ == "__main__":
     #load_profile_list = load_profile_list + load_profile_list_ls_1
     #grid_load_shedding_schedules = [input.ls_annual_empty, input.ls_annual_1]
     
-    load_profile_list = load_profile_list_ls_2 + load_profile_list_ls_3 
-    grid_load_shedding_schedules = [input.ls_annual_2, input.ls_annual_3]
+    load_profile_list = load_profile_list + load_profile_list_ls_2 + load_profile_list_ls_3 
+    grid_load_shedding_schedules = [input.ls_annual_empty, input.ls_annual_2, input.ls_annual_3]
     
     #load_profile_list = [annual_25_perc_ev, annual_25_perc_ls_1]
     #scenario_names = ["25% No LS", '25% LS1']
@@ -157,7 +158,7 @@ if __name__ == "__main__":
     for idx, load_profile in enumerate(load_profile_list):
         for jdx, grid_load_shedding_schedule in enumerate(grid_load_shedding_schedules): 
             # If it IS an EV schedule that is planned around load shedding, then don't use grid load shedding array
-            if ("No LS" not in scenario_names[idx]) and (grid_load_shedding_schedule.sum() > 0):
+            if (("No LS" not in scenario_names[idx]) and (grid_load_shedding_schedule.sum() > 0)) or (("No LS" in scenario_names[idx]) and (grid_load_shedding_schedule.sum() == 0)):
                         continue 
             # if it is an unplanned load shedding EV schedule, then we can include grid load shedding array
             else:
@@ -177,12 +178,18 @@ if __name__ == "__main__":
         optimal_pv_capacity, optimal_battery_capacity, npv_value, execution_time, scenario_name, grid_load_shedding_scenario = result
         
         #Make directory scenario_name if doesn't exist
+        
+        # folder = last word in scenario_name string
+        folder = scenario_name[scenario_name.rfind(" ")+1:]
+        #scenario = the other part of scenario_name string
+        scenario = scenario_name[:scenario_name.rfind(" ")]
+        
          
-        if not os.path.exists(f"../results/{grid_load_shedding_scenario}/{scenario_name}"):   
-            os.makedirs(f"../results/{grid_load_shedding_scenario}/{scenario_name}")
+        if not os.path.exists(f"../results/{grid_load_shedding_scenario}/{folder}/{scenario}"):   
+            os.makedirs(f"../results/{grid_load_shedding_scenario}/{folder}/{scenario}")
             
         # Create the file name
-        file_name = f"../results/{grid_load_shedding_scenario}/{scenario_name}/solar={solar_cost}_battery={battery_cost}.txt"
+        file_name = f"../results/{grid_load_shedding_scenario}/{folder}/{scenario}/solar={solar_cost}_battery={battery_cost}.txt"
         
         # Write the results to the file
         with open(file_name, "w") as f2:
