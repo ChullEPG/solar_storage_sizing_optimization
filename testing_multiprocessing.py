@@ -121,50 +121,54 @@ if __name__ == "__main__":
     
 
     
-    #scenario_names = ["25% No LS", "50% No LS", '75% No LS', '100% No LS', 
-                    #  "25% LS1", '50% LS1', '75% LS1', '100% LS1']      
-    scenario_names = ["25% No LS LS2", "50% No LS LS2", '75% No LS LS2', '100% No LS LS2', 
-                      "25% No LS LS3", "50% No LS LS3", '75% No LS LS3', '100% No LS LS3', 
-                        "25% LS2", '50% LS2', '75% LS2', '100% LS2',
-                      "25% LS3", '50% LS3', '75% LS3', '100% LS3']                        
+    scenario_names = ["25% No LS", "50% No LS", '75% No LS', '100% No LS', 
+                     "25% LS1", '50% LS1', '75% LS1', '100% LS1']      
     load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
-    #load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
-    load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
-    load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
+    load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
+    load_profile_list = load_profile_list + load_profile_list_ls_1 
+    grid_load_shedding_schedules = [input.ls_annual_empty, input.ls_annual_1]
+                         
+    # load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
+    # #load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
+    # load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
+    # load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
     
     
-    #load_profile_list = load_profile_list + load_profile_list_ls_1
-    #grid_load_shedding_schedules = [input.ls_annual_empty, input.ls_annual_1]
-    
-    load_profile_list = load_profile_list + load_profile_list_ls_2 + load_profile_list_ls_3 
-    grid_load_shedding_schedules = [input.ls_annual_empty, input.ls_annual_2, input.ls_annual_3]
-    
-    #load_profile_list = [annual_25_perc_ev, annual_25_perc_ls_1]
-    #scenario_names = ["25% No LS", '25% LS1']
-    
-    
-    solar_costs = [500, 600, 700, 800, 900]
-    battery_costs = [100, 200, 300, 400, 500]
+    #load_profile_list = load_profile_list #+ load_profile_list_ls_2 + load_profile_list_ls_3 
+   # grid_load_shedding_schedules = [input.ls_annual_2]
+    #next - grid LS ON, Ev scheduling LS OFF (scp before doing next )
+    #grid_load_shedding_schedules = [input.ls_annual_3]
+    # then - grid LS OFF, Ev scheduling LS ON 
+    # scenario_names = ["25% LS2", '50% LS2', '75% LS2', '100% LS2',
+    #                   "25% LS3", '50% LS3', '75% LS3', '100% LS3']         
+    # load_profile_list = load_profile_list_ls_2 + load_profile_list_ls_3
+    # grid_load_shedding_schedules = [input.ls_annual_empty]
+    # next, back to this one in case it messed up
+    # grid_load_shedding_schedules = [input.ls_annual_3]
+    # scenario_names = ["25% No LS", "50% No LS", "75% No LS", "100% No LS"]
+    # load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
+
+
+
+
+    # solar_costs = [500, 600, 700, 800, 900] 
+    # battery_costs = [100, 200, 300, 400, 500]
+    solar_costs = [500]
+    battery_costs = [300]
    
     
-
     bounds = [(0,1000), (0,1000)]
     a = input.a 
     pool = mp.Pool(processes=mp.cpu_count())
 
-    total_combinations = len(load_profile_list) * len(solar_costs) * len(battery_costs) * 1.5 #len(grid_load_shedding_schedules)
+    total_combinations = len(load_profile_list) * len(solar_costs) * len(battery_costs) #len(grid_load_shedding_schedules)
     combinations = []
 
     for idx, load_profile in enumerate(load_profile_list):
         for jdx, grid_load_shedding_schedule in enumerate(grid_load_shedding_schedules): 
-            # If it IS an EV schedule that is planned around load shedding, then don't use grid load shedding array
-            if (("No LS" not in scenario_names[idx]) and (grid_load_shedding_schedule.sum() > 0)) or (("No LS" in scenario_names[idx]) and (grid_load_shedding_schedule.sum() == 0)):
-                        continue 
-            # if it is an unplanned load shedding EV schedule, then we can include grid load shedding array
-            else:
-                for solar_cost in solar_costs:
-                    for battery_cost in battery_costs:
-                        combinations.append((solar_cost, battery_cost, load_profile, grid_load_shedding_schedule, scenario_names[idx], bounds, a))
+            for solar_cost in solar_costs:
+                for battery_cost in battery_costs:
+                    combinations.append((solar_cost, battery_cost, load_profile, grid_load_shedding_schedule, scenario_names[idx], bounds, a))
 
     # Use starmap to parallelize the optimization process
     results = list(tqdm(pool.starmap(optimize_system_v2, combinations), total=total_combinations, desc="Progress"))
@@ -177,27 +181,32 @@ if __name__ == "__main__":
         solar_cost, battery_cost, load_profile, grid_load_shedding_schedule, scenario_name, _, _, = combinations[idx]
         optimal_pv_capacity, optimal_battery_capacity, npv_value, execution_time, scenario_name, grid_load_shedding_scenario = result
         
+        
         #Make directory scenario_name if doesn't exist
-        
-        # folder = last word in scenario_name string
-        folder = scenario_name[scenario_name.rfind(" ")+1:]
-        #scenario = the other part of scenario_name string
-        scenario = scenario_name[:scenario_name.rfind(" ")]
-        
-         
-        if not os.path.exists(f"../results/{grid_load_shedding_scenario}/{folder}/{scenario}"):   
-            os.makedirs(f"../results/{grid_load_shedding_scenario}/{folder}/{scenario}")
+        if not os.path.exists(f"../results/{grid_load_shedding_scenario}/{scenario_name}"):   
+            os.makedirs(f"../results/{grid_load_shedding_scenario}/{scenario_name}")
             
         # Create the file name
-        file_name = f"../results/{grid_load_shedding_scenario}/{folder}/{scenario}/solar={solar_cost}_battery={battery_cost}.txt"
+        file_name = f"../results/{grid_load_shedding_scenario}/{scenario_name}/solar={solar_cost}_battery={battery_cost}.txt"
         
         # Write the results to the file
         with open(file_name, "w") as f2:
             f2.write(f"Optimal PV Capacity: {optimal_pv_capacity} kW\n")
             f2.write(f"Optimal Battery Capacity: {optimal_battery_capacity} kWh\n")
             f2.write(f"NPV: {npv_value}\n")
+            # Calculate investment cost, ROI, and LCOE
             investment_cost = economic_analysis.calculate_pv_capital_cost(optimal_pv_capacity, a) + (a['battery_cost_per_kWh'] * optimal_battery_capacity)
             f2.write(f"Investment cost: ${investment_cost}\n") 
+            roi = npv_value / investment_cost
+            f2.write(f"ROI: {roi} %\n")
+            lcoe_pv = economic_analysis.calculate_lcoe_pv(optimal_pv_capacity, load_profile, a)
+            lcoe_batt = economic_analysis.calculate_lcoe_batt(optimal_pv_capacity, optimal_battery_capacity, a)
+            f2.write(f"LCOE_PV: {lcoe_pv}$/kWh \n")
+            f2.write(f"LCOE_Batt: {lcoe_batt}$/kWh \n")
+            p_grid = economic_analysis.compute_p_grid(load_profile, a)
+            f2.write(f"P_grid: {p_grid}$/kWh \n")
+            lps = load_profile.sum()
+            f2.write(f"Load profile sum {lps} \n")
         
         # Print the results
         print(f"Combination {idx + 1}/{total_combinations}:")
@@ -208,9 +217,11 @@ if __name__ == "__main__":
         print("Optimal Battery Capacity:", optimal_battery_capacity, 'kWh')
         print("NPV:", npv_value)
         print("Investment cost: $", investment_cost) 
+        print("LCOE PV", lcoe_pv)
+        print("LCOE Batt", lcoe_batt)
+        print("Avg grid price", p_grid)
         print("Execution Time (minutes):", execution_time)
         print()
-    
 
             
     end_time = time.time()

@@ -182,8 +182,11 @@ def get_pv_net_present_cost(pv_capacity, a):
             
     return npc    
     
-def calculate_lcoe_pv(optimal_pv_capacity, a):
-    return get_pv_net_present_cost(optimal_pv_capacity, a) / get_energy_served_by_pv(optimal_pv_capacity, a)
+def calculate_lcoe_pv(optimal_pv_capacity, load_profile, a):
+    npc = get_pv_net_present_cost(optimal_pv_capacity, a)
+    energy = get_energy_served_by_pv(optimal_pv_capacity, load_profile, a)
+    
+    return npc / energy
 
 
 def calculate_lcoe_batt(pv_capacity, battery_capacity, a):
@@ -261,6 +264,37 @@ def calculate_lcoe_batt(pv_capacity, battery_capacity, a):
 
     
     return npc/ battery_TOTAL_energy_throughput # lcoe
+
+
+def compute_p_grid(load_profile, a):
+    cost = 0
+    for hour, kwh in enumerate(load_profile):
+        # In winter
+        if hour > a['high_period_start'] and hour <= a['high_period_end']:
+            off_peak = a['time_of_use_tariffs_high']['off_peak']
+            standard = a['time_of_use_tariffs_high']['standard']
+            peak = a['time_of_use_tariffs_high']['peak']
+        else:
+            off_peak = a['time_of_use_tariffs_low']['off_peak']
+            standard = a['time_of_use_tariffs_low']['standard']
+            peak = a['time_of_use_tariffs_low']['peak']
+            
+        
+        if (hour % 168) > 120: # weekend
+            cost += kwh * off_peak
+            
+        elif (hour % 24) in a['time_periods']['peak_hours']:
+            cost += kwh * peak
+            
+        elif (hour % 24) in a['time_periods']['standard_hours']:
+            cost += kwh * standard
+            
+        else:
+            cost += kwh * off_peak
+            
+    p_grid = cost/load_profile.sum()
+    
+    return p_grid
     
     
 ########## Payback period ############
