@@ -108,20 +108,35 @@ if __name__ == "__main__":
     annual_75_perc_ls_1 = np.loadtxt(f"processed_ev_schedule_data/75_perc/annual_ls_1.txt") 
     annual_100_perc_ls_1 = np.loadtxt(f"processed_ev_schedule_data/100_perc/annual_ls_1.txt") 
     
+    annual_25_perc_ls_2 = np.loadtxt(f"processed_ev_schedule_data/25_perc/annual_ls_2.txt") 
+    annual_50_perc_ls_2 = np.loadtxt(f"processed_ev_schedule_data/50_perc/annual_ls_2.txt") 
+    annual_75_perc_ls_2 = np.loadtxt(f"processed_ev_schedule_data/75_perc/annual_ls_2.txt") 
+    annual_100_perc_ls_2 = np.loadtxt(f"processed_ev_schedule_data/100_perc/annual_ls_2.txt") 
+    
+    annual_25_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/25_perc/annual_ls_3.txt") 
+    annual_50_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/50_perc/annual_ls_3.txt") 
+    annual_75_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/75_perc/annual_ls_3.txt") 
+    annual_100_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/100_perc/annual_ls_3.txt") 
+    
     
 
     
-    scenario_names = ["25% No LS", "50% No LS", '75% No LS', '100% No LS', 
-                      "25% LS1", '50% LS1', '75% LS1', '100% LS1']                                
+    #scenario_names = ["25% No LS", "50% No LS", '75% No LS', '100% No LS', 
+                    #  "25% LS1", '50% LS1', '75% LS1', '100% LS1']      
+    scenario_names = ["25% LS2", '50% LS2', '75% LS2', '100% LS2',
+                      "25% LS3", '50% LS3', '75% LS3', '100% LS3']                        
     
-    load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
-    load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
-    # load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
-    # load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
+    #load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
+    #load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
+    load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
+    load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
     
     
-    load_profile_list = load_profile_list + load_profile_list_ls_1
-    grid_load_shedding_schedules = [input.ls_annual_empty, input.ls_annual_1]
+    #load_profile_list = load_profile_list + load_profile_list_ls_1
+    #grid_load_shedding_schedules = [input.ls_annual_empty, input.ls_annual_1]
+    
+    load_profile_list = load_profile_list_ls_2 + load_profile_list_ls_3 
+    grid_load_shedding_schedules = [input.ls_annual_2, input.ls_annual_3]
     
     #load_profile_list = [annual_25_perc_ev, annual_25_perc_ls_1]
     #scenario_names = ["25% No LS", '25% LS1']
