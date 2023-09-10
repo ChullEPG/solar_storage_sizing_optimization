@@ -121,20 +121,23 @@ if __name__ == "__main__":
     
  
     
-    scenario_names = ["25% No LS LS1", "50% No LS LS1", "75% No LS LS1", "100% No LS LS1"]    
+    scenario_names = ["25% No LS", "50% No LS", "75% No LS", "100% No LS",
+                      "25% LS1", "50% LS1", "75% LS1", "100% LS1",
+                      "25% LS2", "50% LS2", "75% LS2", "100% LS2",
+                      "25% LS3", "50% LS3", "75% LS3", "100% LS3"]    
   #  load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
    # load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
     
     
   #  load_profile_list = load_profile_list + load_profile_list_ls_1 
    #grid_load_shedding_schedules = [input.ls_annual_empty]
-    grid_load_shedding_schedules = [input.ls_annual_1]
+    grid_load_shedding_schedules = [input.ls_annual_empty]
                          
     load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
-    # #load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
-    #load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
-   # load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
-  #  load_profile_list = load_profile_list_ls_2 + load_profile_list_ls_3 
+    load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
+    load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
+    load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
+    load_profile_list = load_profile_list + load_profile_list_ls_1 + load_profile_list_ls_2 + load_profile_list_ls_3 
     
     #load_profile_list = load_profile_list #+ load_profile_list_ls_2 + load_profile_list_ls_3 
    # grid_load_shedding_schedules = [input.ls_annual_2]
@@ -209,6 +212,9 @@ if __name__ == "__main__":
             f2.write(f"P_grid: {p_grid}$/kWh \n")
             lps = load_profile.sum()
             f2.write(f"Load profile sum {lps} \n")
+            kwh_ls, op_savings = economic_analysis.get_kwh_ls_and_op_savings(optimal_pv_capacity, optimal_battery_capacity, a)
+            f2.write(f"kwh_ls: {kwh_ls} \n")
+            f2.write(f"op_savings: {op_savings} \n")
         
         # Print the results
         print(f"Combination {idx + 1}/{total_combinations}:")
@@ -223,6 +229,8 @@ if __name__ == "__main__":
         print("LCOE Batt", lcoe_batt)
         print("Avg grid price", p_grid)
         print("Execution Time (minutes):", execution_time)
+        print("kwh_ls:", kwh_ls)
+        print('op_savings:', op_savings)
         print()
 
             

@@ -82,7 +82,7 @@ a = {
     'battery_end_of_life_perc': battery.end_of_life_perc,
     'battery_trickle_charging_rate': battery.trickle_charging_rate,
     'battery_lifetime_years': battery.lifetime_years,
-    'enable_trickle_charging': False,
+    'enable_trickle_charging': True,
     'repurchase_battery': True,
     'limit_battery_repurchases': False,
     # Energy costs and schedule 
