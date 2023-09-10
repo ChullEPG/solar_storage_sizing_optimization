@@ -42,12 +42,12 @@ ls_4 = generate_loadshedding_profile(load_shedding_schedules.ls_4)
 
 ## Append them together to make weekly thingy
 ls_order_1 = np.concatenate((ls_1, ls_2, ls_3, ls_4, ls_1, ls_2, ls_3), axis = 0)
-# ls_order_2 = np.concatenate((ls_2, ls_2, ls_1, ls_1, ls_1, ls_1, ls_0), axis = 0)
-# ls_order_3 = np.concatenate((ls_1, ls_1, ls_1, ls_0, ls_0, ls_0, ls_0), axis = 0)
+ls_order_2 = np.concatenate((ls_3, ls_3, ls_2, ls_2, ls_2, ls_2, ls_1), axis = 0)
+ls_order_3 = np.concatenate((ls_2, ls_1, ls_1, ls_1, ls_1, ls_4, ls_4), axis = 0)
 # Make annual by repeating it 52 times and adding one to the end (MAKE SURE SAME AS IN LOAD_EV_SCHEDULES)
 ls_annual_1 = np.concatenate([np.tile(ls_order_1, 52), ls_1], axis = 0)
-# ls_annual_2 = np.concatenate([np.tile(ls_order_2, 52), ls_2], axis = 0)
-# ls_annual_3 = np.concatenate([np.tile(ls_order_2, 52), ls_1], axis = 0)
+ls_annual_2 = np.concatenate([np.tile(ls_order_2, 52), ls_2], axis = 0)
+ls_annual_3 = np.concatenate([np.tile(ls_order_2, 52), ls_4], axis = 0)
 # Empty ls_annual schedule
 ls_annual_empty = np.zeros(8760)
      

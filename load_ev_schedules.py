@@ -71,7 +71,7 @@ sun_ls_4_25_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2
 #1234123 (0123012)
 weekly_ls_1_25_perc_pen = pd.concat([mon_fri_ls_1_25_perc_pen, mon_fri_ls_2_25_perc_pen, mon_fri_ls_3_25_perc_pen, mon_fri_ls_4_25_perc_pen, mon_fri_ls_1_25_perc_pen, sat_ls_2_25_perc_pen, sun_ls_3_25_perc_pen], ignore_index = True)
 #3322221 (2211110)
-weekly_ls_2_25_perc_pen = pd.concat([mon_fri_ls_3_25_perc_pen, mon_fri_ls_3_25_perc_pen, mon_fri_ls_2_25_perc_pen, mon_fri_ls_2_25_perc_pen, mon_fri_ls_2_25_perc_pen, sat_ls_2_25_perc_pen, sun_ls_2_25_perc_pen], ignore_index = True)
+weekly_ls_2_25_perc_pen = pd.concat([mon_fri_ls_3_25_perc_pen, mon_fri_ls_3_25_perc_pen, mon_fri_ls_2_25_perc_pen, mon_fri_ls_2_25_perc_pen, mon_fri_ls_2_25_perc_pen, sat_ls_2_25_perc_pen, sun_ls_1_25_perc_pen], ignore_index = True)
 #2111144 (1000033)
 weekly_ls_3_25_perc_pen = pd.concat([mon_fri_ls_2_25_perc_pen, mon_fri_ls_1_25_perc_pen, mon_fri_ls_1_25_perc_pen, mon_fri_ls_1_25_perc_pen, mon_fri_ls_1_25_perc_pen, sat_ls_4_25_perc_pen, sun_ls_4_25_perc_pen ], ignore_index = True)
 
@@ -122,7 +122,7 @@ sun_ls_4_50_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2
 
 # Concatenating into full weekly charging profiles
 weekly_ls_1_50_perc_pen = pd.concat([mon_fri_ls_1_50_perc_pen, mon_fri_ls_2_50_perc_pen, mon_fri_ls_3_50_perc_pen, mon_fri_ls_4_50_perc_pen, mon_fri_ls_1_50_perc_pen, sat_ls_2_50_perc_pen, sun_ls_3_50_perc_pen], ignore_index = True)
-weekly_ls_2_50_perc_pen = pd.concat([mon_fri_ls_3_50_perc_pen, mon_fri_ls_3_50_perc_pen, mon_fri_ls_2_50_perc_pen, mon_fri_ls_2_50_perc_pen, mon_fri_ls_2_50_perc_pen, sat_ls_2_50_perc_pen, sun_ls_2_50_perc_pen], ignore_index = True)
+weekly_ls_2_50_perc_pen = pd.concat([mon_fri_ls_3_50_perc_pen, mon_fri_ls_3_50_perc_pen, mon_fri_ls_2_50_perc_pen, mon_fri_ls_2_50_perc_pen, mon_fri_ls_2_50_perc_pen, sat_ls_2_50_perc_pen, sun_ls_1_50_perc_pen], ignore_index = True)
 weekly_ls_3_50_perc_pen = pd.concat([mon_fri_ls_2_50_perc_pen, mon_fri_ls_1_50_perc_pen, mon_fri_ls_1_50_perc_pen, mon_fri_ls_1_50_perc_pen, mon_fri_ls_1_50_perc_pen, sat_ls_4_50_perc_pen, sun_ls_4_50_perc_pen ], ignore_index = True)
 
 # Converting to annual charging profiles
@@ -173,7 +173,7 @@ sun_ls_4_75_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/2
 
 # Concatenating into full weekly charging profiles
 weekly_ls_1_75_perc_pen = pd.concat([mon_fri_ls_1_75_perc_pen, mon_fri_ls_2_75_perc_pen, mon_fri_ls_3_75_perc_pen, mon_fri_ls_4_75_perc_pen, mon_fri_ls_1_75_perc_pen, sat_ls_2_75_perc_pen, sun_ls_3_75_perc_pen], ignore_index = True)
-weekly_ls_2_75_perc_pen = pd.concat([mon_fri_ls_3_75_perc_pen, mon_fri_ls_3_75_perc_pen, mon_fri_ls_2_75_perc_pen, mon_fri_ls_2_75_perc_pen, mon_fri_ls_2_75_perc_pen, sat_ls_2_75_perc_pen, sun_ls_2_75_perc_pen], ignore_index = True)
+weekly_ls_2_75_perc_pen = pd.concat([mon_fri_ls_3_75_perc_pen, mon_fri_ls_3_75_perc_pen, mon_fri_ls_2_75_perc_pen, mon_fri_ls_2_75_perc_pen, mon_fri_ls_2_75_perc_pen, sat_ls_2_75_perc_pen, sun_ls_1_75_perc_pen], ignore_index = True)
 weekly_ls_3_75_perc_pen = pd.concat([mon_fri_ls_2_75_perc_pen, mon_fri_ls_1_75_perc_pen, mon_fri_ls_1_75_perc_pen, mon_fri_ls_1_75_perc_pen, mon_fri_ls_1_75_perc_pen, sat_ls_4_75_perc_pen, sun_ls_4_75_perc_pen ], ignore_index = True)
 
 # Converting to annual charging profiles
@@ -190,7 +190,7 @@ annual_ls_3_75_perc_pen = downsample_minutely_to_hourly(annual_ls_3_75_perc_pen)
 np.savetxt(f"processed_ev_schedule_data/75_perc/weekly_ls_1.txt", weekly_ls_1_75_perc_pen)
 np.savetxt(f"processed_ev_schedule_data/75_perc/annual_ls_1.txt", annual_ls_1_75_perc_pen)
 
-np.savetxt(f"processed_ev_schedule_data/50_perc/weekly_ls_2.txt", weekly_ls_2_75_perc_pen)
+np.savetxt(f"processed_ev_schedule_data/75_perc/weekly_ls_2.txt", weekly_ls_2_75_perc_pen)
 np.savetxt(f"processed_ev_schedule_data/75_perc/annual_ls_2.txt", annual_ls_2_75_perc_pen)
 
 np.savetxt(f"processed_ev_schedule_data/75_perc/weekly_ls_3.txt", weekly_ls_3_75_perc_pen)
@@ -223,7 +223,7 @@ sun_ls_4_100_perc_pen = process_ev_schedule_data('data/3 scenarios data/2hrs_ls/
 
 # Concatenating into full weekly charging profiles
 weekly_ls_1_100_perc_pen = pd.concat([mon_fri_ls_1_100_perc_pen, mon_fri_ls_2_100_perc_pen, mon_fri_ls_3_100_perc_pen, mon_fri_ls_4_100_perc_pen, mon_fri_ls_1_100_perc_pen, sat_ls_2_100_perc_pen, sun_ls_3_100_perc_pen], ignore_index = True)
-weekly_ls_2_100_perc_pen = pd.concat([mon_fri_ls_3_100_perc_pen, mon_fri_ls_3_100_perc_pen, mon_fri_ls_2_100_perc_pen, mon_fri_ls_2_100_perc_pen, mon_fri_ls_2_100_perc_pen, sat_ls_2_100_perc_pen, sun_ls_2_100_perc_pen], ignore_index = True)
+weekly_ls_2_100_perc_pen = pd.concat([mon_fri_ls_3_100_perc_pen, mon_fri_ls_3_100_perc_pen, mon_fri_ls_2_100_perc_pen, mon_fri_ls_2_100_perc_pen, mon_fri_ls_2_100_perc_pen, sat_ls_2_100_perc_pen, sun_ls_1_100_perc_pen], ignore_index = True)
 weekly_ls_3_100_perc_pen = pd.concat([mon_fri_ls_2_100_perc_pen, mon_fri_ls_1_100_perc_pen, mon_fri_ls_1_100_perc_pen, mon_fri_ls_1_100_perc_pen, mon_fri_ls_1_100_perc_pen, sat_ls_4_100_perc_pen, sun_ls_4_100_perc_pen ], ignore_index = True)
 
 # Converting to annual charging profiles
@@ -240,7 +240,7 @@ annual_ls_3_100_perc_pen = downsample_minutely_to_hourly(annual_ls_3_100_perc_pe
 np.savetxt(f"processed_ev_schedule_data/100_perc/weekly_ls_1.txt", weekly_ls_1_100_perc_pen)
 np.savetxt(f"processed_ev_schedule_data/100_perc/annual_ls_1.txt", annual_ls_1_100_perc_pen)
 
-np.savetxt(f"processed_ev_schedule_data/50_perc/weekly_ls_2.txt", weekly_ls_2_100_perc_pen)
+np.savetxt(f"processed_ev_schedule_data/100_perc/weekly_ls_2.txt", weekly_ls_2_100_perc_pen)
 np.savetxt(f"processed_ev_schedule_data/100_perc/annual_ls_2.txt", annual_ls_2_100_perc_pen)
 
 np.savetxt(f"processed_ev_schedule_data/100_perc/weekly_ls_3.txt", weekly_ls_3_100_perc_pen)

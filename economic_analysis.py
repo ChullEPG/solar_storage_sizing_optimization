@@ -154,25 +154,14 @@ def calculate_crf(a):
     # Calculate annual payments   
     return (a['interest rate'] * (1 + a['interest rate'])**a['Rproj']) / ((1 + a['interest rate'])**a['Rproj'] - 1)
 
-def get_energy_served_by_pv(pv_capacity, load_profile, a):
-    
-    total_energy_served_by_pv = 0 
-    
-    for year in range(a['Rproj']):
-        usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
-        pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
-        energy_served_by_pv = load_profile- (load_profile - pv_output_profile)
-     
-        total_energy_served_by_pv += energy_served_by_pv.sum()
-        
 
-    return total_energy_served_by_pv
 
 
 def get_pv_net_present_cost(pv_capacity, a):
     npc = 0
     pv_capital_cost = calculate_pv_capital_cost(pv_capacity, a)
     loan_installment = calculate_crf(a) * (pv_capital_cost) 
+    
     pv_maintenance_cost = a['pv_annual_maintenance_cost'] * pv_capacity
 
     for year in range(a['Rproj']):
@@ -181,7 +170,22 @@ def get_pv_net_present_cost(pv_capacity, a):
             npc -= (a['solar_residual_value_factor'] * a['pv_cost_per_kw'] * pv_capacity)/((1 + a['discount rate'])**year)
             
     return npc    
+
+def get_energy_served_by_pv(pv_capacity, load_profile, a):
     
+    total_energy_served_by_pv = 0 
+    
+    load_profile = np.array(load_profile) # for usage in np.where function
+    
+    for year in range(a['Rproj']):
+        usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
+        pv_output_profile = np.array(generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity))
+        energy_served_by_pv = np.where((pv_output_profile > 0) & (load_profile > 0), np.minimum(load_profile, pv_output_profile), 0)
+        total_energy_served_by_pv += energy_served_by_pv.sum()
+        
+
+    return total_energy_served_by_pv
+
 def calculate_lcoe_pv(optimal_pv_capacity, load_profile, a):
     npc = get_pv_net_present_cost(optimal_pv_capacity, a)
     energy = get_energy_served_by_pv(optimal_pv_capacity, load_profile, a)
