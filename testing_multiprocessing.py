@@ -215,6 +215,11 @@ if __name__ == "__main__":
             kwh_ls, op_savings = economic_analysis.get_kwh_ls_and_op_savings(optimal_pv_capacity, optimal_battery_capacity, a)
             f2.write(f"kwh_ls: {kwh_ls} \n")
             f2.write(f"op_savings: {op_savings} \n")
+            # demand served by system
+            d_sys = economic_analysis.get_demand_served_by_system(optimal_pv_capacity, optimal_battery_capacity, a)
+            f2.write(f"d_sys: {d_sys} \n")
+            carbon_savings = d_sys * 0.95 # SA grid intensity = 0.95kgCO2/kWh
+            f2.write(f"carbon_savings: {carbon_savings} \n")
         
         # Print the results
         print(f"Combination {idx + 1}/{total_combinations}:")
@@ -231,6 +236,8 @@ if __name__ == "__main__":
         print("Execution Time (minutes):", execution_time)
         print("kwh_ls:", kwh_ls)
         print('op_savings:', op_savings)
+        print("d_sys:", d_sys)
+        print("carbon_savings:", carbon_savings)
         print()
 
             

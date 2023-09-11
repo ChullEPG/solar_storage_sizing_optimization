@@ -848,3 +848,92 @@ def get_kwh_ls_and_op_savings(pv_capacity, battery_capacity, a):
     # breakpoint()
 
     return kwh_ls, operational_savings
+
+
+def get_demand_served_by_system(pv_capacity, battery_capacity, a):
+
+    total_energy_served_by_system = 0 
+
+
+    battery_energy_throughput = 0 # Initialize total quantity of battery energy throughput
+    repurchase_battery = a['repurchase_battery'] # Initialize battery repurchase bool 
+    battery_max_energy_throughput = generate_data.get_battery_max_energy_throughput(battery_capacity, a) # Get max battery energy throughput
+
+   
+
+    battery_exists = True # true until run out of repurchases
+        
+    for year in range(a['Rproj']):
+        
+        # Update PV and battery capacity after degradation   
+        usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
+        
+        if battery_exists:
+            usable_battery_capacity = calculations.get_usable_battery_capacity(battery_capacity, battery_energy_throughput, battery_max_energy_throughput, year, a)
+            
+        # Generate PV Output profile 
+        pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
+        
+        # Initialize battery repurchae cost, residual value, and cost of trickle charging (these are all zero at beginning and change throughout)
+        battery_repurchase_cost = 0
+
+            
+            ###########################################################################################
+            # Battery
+            ###########################################################################################  
+        
+        # Check if the battery is still alive 
+        if battery_energy_throughput < battery_max_energy_throughput: 
+
+            pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, usable_battery_capacity,  battery_energy_throughput, battery_max_energy_throughput, a)
+            
+            battery_energy_throughput = battery_throughput # update total battery energy throughput 
+            
+        else:
+            if repurchase_battery: 
+                
+
+                usable_battery_capacity = battery_capacity # reset usable battery capacity
+                battery_energy_throughput = 0 # reset battery energy used
+                pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, battery_capacity, battery_energy_throughput,battery_max_energy_throughput,a)
+                battery_energy_throughput = battery_throughput
+                if a['limit_battery_repurchases']:
+                    repurchase_battery = False
+            else:
+                pv_with_battery_output_profile = pv_output_profile 
+                battery_exists = False
+                usable_battery_capacity = 0
+                
+                
+                
+                
+        # loadshedding_schedule = a['load_shedding_schedule']
+        # net_load_profile = a['load_profile'] - pv_with_battery_output_profile
+        # gross_load_lost_to_loadshedding = np.array([a['load_profile'][i] if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)]) 
+        
+        # # Profile of kWh that would have been lost to loadshedding but are saved by the solar + battery generation [these are beneficial, and not to be charged $$ for]
+        # saved_free_kWh = [min(pv_with_battery_output_profile[i], gross_load_lost_to_loadshedding[i]) if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)]
+        
+        # kwh_ls += sum(saved_free_kWh)
+        
+        
+        # # Profile of kWh that would be lost to load shedding WITH solar and battery
+        # net_load_lost_to_loadshedding = np.array([net_load_profile[i] if is_shedding and net_load_profile[i] > 0 else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
+        # gross_load_minus_loadshedding = a['load_profile'] - gross_load_lost_to_loadshedding
+        # net_load_minus_loadshedding = net_load_profile - net_load_lost_to_loadshedding 
+        # value_of_charging_saved_by_pv_from_loadshedding = get_cost_of_missed_passengers_from_loadshedding_v2(year, saved_free_kWh, a)
+        
+        # load_profile = gross_load_minus_loadshedding
+        # net_load_profile = net_load_minus_loadshedding 
+
+
+
+
+        
+        energy_served_by_system = np.where((pv_with_battery_output_profile > 0) & (a['load_profile'] > 0), np.minimum(a['load_profile'], pv_with_battery_output_profile), 0)
+      #  print(total_energy_served_by_system, energy_served_by_system.sum())
+        total_energy_served_by_system += energy_served_by_system.sum()
+        
+            
+    
+    return total_energy_served_by_system
