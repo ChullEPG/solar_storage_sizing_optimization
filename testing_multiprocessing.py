@@ -71,6 +71,9 @@ def optimize_system_v2(solar_cost, battery_cost, load_profile, grid_load_sheddin
         load_shedding_scenario = "Grid LS off"
     
     initial_guess = [500, 500]
+    
+    if '100%' in scenario_name:
+        a['full_ev_fleet'] = True
 
     # Run 
     result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan_v3, x0 = initial_guess, args = (a,), bounds=bounds, constraints = cons , method= 'SLSQP')
@@ -94,9 +97,7 @@ def optimize_system_v2(solar_cost, battery_cost, load_profile, grid_load_sheddin
 if __name__ == "__main__":
     
     start_time = time.time()
-    
-    
-    print("ALL LOAD PROFILES WITH SOLAR AND BATT SENSITIVITY")
+
     
     annual_25_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_25_perc_ev.txt")
     annual_50_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_50_perc_ev.txt")
@@ -121,23 +122,20 @@ if __name__ == "__main__":
     
  
     
-    scenario_names = ["25% No LS", "50% No LS", "75% No LS", "100% No LS",
-                      "25% LS1", "50% LS1", "75% LS1", "100% LS1",
-                      "25% LS2", "50% LS2", "75% LS2", "100% LS2",
-                      "25% LS3", "50% LS3", "75% LS3", "100% LS3"]    
+    scenario_names = [ "25% LS1", "50% LS1", "75% LS1", "100% LS1"]    
   #  load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
    # load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
     
     
   #  load_profile_list = load_profile_list + load_profile_list_ls_1 
    #grid_load_shedding_schedules = [input.ls_annual_empty]
-    grid_load_shedding_schedules = [input.ls_annual_empty]
+    grid_load_shedding_schedules = [input.ls_annual_1]
                          
     load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
-    load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
-    load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
-    load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
-    load_profile_list = load_profile_list + load_profile_list_ls_1 + load_profile_list_ls_2 + load_profile_list_ls_3 
+    #load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
+    #load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
+   # load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
+    load_profile_list =  load_profile_list
     
     #load_profile_list = load_profile_list #+ load_profile_list_ls_2 + load_profile_list_ls_3 
    # grid_load_shedding_schedules = [input.ls_annual_2]
@@ -204,7 +202,7 @@ if __name__ == "__main__":
             f2.write(f"Investment cost: ${investment_cost}\n") 
             roi = npv_value / investment_cost
             f2.write(f"ROI: {roi} %\n")
-            lcoe_pv = economic_analysis.calculate_lcoe_pv(optimal_pv_capacity, load_profile, a)
+            lcoe_pv = economic_analysis.calculate_lcoe_pv(optimal_pv_capacity, optimal_battery_capacity, load_profile, a)
             lcoe_batt = economic_analysis.calculate_lcoe_batt(optimal_pv_capacity, optimal_battery_capacity, a)
             f2.write(f"LCOE_PV: {lcoe_pv}$/kWh \n")
             f2.write(f"LCOE_Batt: {lcoe_batt}$/kWh \n")
@@ -220,6 +218,11 @@ if __name__ == "__main__":
             f2.write(f"d_sys: {d_sys} \n")
             carbon_savings = d_sys * 0.95 # SA grid intensity = 0.95kgCO2/kWh
             f2.write(f"carbon_savings: {carbon_savings} \n")
+            
+            coe_w_pv, coe_no_pv = economic_analysis.get_cost_of_energy(optimal_pv_capacity, optimal_battery_capacity, a)
+            f2.write(f"coe_w_pv: {coe_w_pv} \n")
+            f2.write(f"coe_no_pv: {coe_no_pv} \n")
+            
         
         # Print the results
         print(f"Combination {idx + 1}/{total_combinations}:")

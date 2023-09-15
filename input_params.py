@@ -82,7 +82,7 @@ a = {
     'battery_end_of_life_perc': battery.end_of_life_perc,
     'battery_trickle_charging_rate': battery.trickle_charging_rate,
     'battery_lifetime_years': battery.lifetime_years,
-    'enable_trickle_charging': True,
+    'enable_trickle_charging': False,
     'repurchase_battery': True,
     'limit_battery_repurchases': False,
     # Energy costs and schedule 
@@ -100,9 +100,11 @@ a = {
     # Vehicle specs
     'L_km': market.L_km, 
     'kwh_km': market.kwh_km,
+    'hiring_cost': market.hiring_cost,
     # Load shedding 
     'load_shedding_bool': False,
     'load_shedding_schedule': ls_annual_empty,
+    'full_ev_fleet': False,
     # Loan model
   #  'loan_payback_period': market.loan_payback_period,
     # Battery cell specs

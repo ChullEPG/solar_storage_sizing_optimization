@@ -269,12 +269,16 @@ def objective_function_with_solar_and_battery_degradation_loan_v3(x, a):
         gross_load_minus_loadshedding = a['load_profile'] - gross_load_lost_to_loadshedding
         net_load_minus_loadshedding = net_load_profile - net_load_lost_to_loadshedding 
         value_of_charging_saved_by_pv_from_loadshedding = economic_analysis.get_cost_of_missed_passengers_from_loadshedding_v2(year, saved_free_kWh, a)
+        val_kwh_ls = value_of_charging_saved_by_pv_from_loadshedding.sum()
+        
+        if a['full_ev_fleet'] and value_of_charging_saved_by_pv_from_loadshedding.sum() > 0:
+            val_kwh_ls -= a['hiring_cost'] * net_load_lost_to_loadshedding.sum() * (1/a['kwh_km']) #$/km * kwh * km/kwh = $
         
         load_profile = gross_load_minus_loadshedding
-        net_load_profile = net_load_minus_loadshedding 
+        net_load_profile = net_load_minus_loadshedding  # equals net load profile - 0 if there's no load shedding
 
                     
-        energy_savings = economic_analysis.get_energy_savings(cost_of_trickle_charging, load_profile, net_load_profile, year, a) + value_of_charging_saved_by_pv_from_loadshedding.sum()
+        energy_savings = economic_analysis.get_energy_savings(cost_of_trickle_charging, load_profile, net_load_profile, year, a) + val_kwh_ls
         maintenance_costs = (pv_maintenance_cost + battery_maintenance_cost) * (1 + a['inflation rate'])**(year - 1)
         
         net_cash_flows[year] = energy_savings - loan_installment - maintenance_costs - battery_residual_value
