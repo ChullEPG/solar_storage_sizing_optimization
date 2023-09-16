@@ -41,7 +41,7 @@ loan_payback_period = 20 # 10 years for the solar PV system provider to fully re
 
 # ICE vehicle specs
 kwh_km = 0.55 # kWh/km
-L_km = 0.15
+L_km = 0.138
 km_L = 1/L_km # km/L
 kwh_L = kwh_km * km_L # kWh/L
 

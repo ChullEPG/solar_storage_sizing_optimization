@@ -891,7 +891,7 @@ def get_kwh_ls_and_op_savings(pv_capacity, battery_capacity, a):
         
         operational_savings += value_of_charging_saved_by_pv_from_loadshedding.sum()
         
-        print(kwh_ls, operational_savings)
+        #print(kwh_ls, operational_savings)
         
         
         #if in final year
@@ -1009,10 +1009,12 @@ def get_cost_of_energy_pv_and_no_pv(load_profile, net_load_profile, year, a):
     total_cost_no_pv = np.zeros(len(load_profile))
     total_cost_with_pv = np.zeros(len(net_load_profile))
     
+        
     # Calculate total cost of energy with and without PV
     for i in range(len(total_cost_no_pv)):      
         curr_hour_of_week = i % 168 
         curr_hour_of_day = i % 24
+        
         
         if (i > a['high_period_start']) & (i <= a['high_period_end']): # high period (all peak)
             peak_cost = a['time_of_use_tariffs_high']['peak'] * (1 + a['inflation rate'])**(year - 1)
@@ -1046,16 +1048,15 @@ def get_cost_of_energy_pv_and_no_pv(load_profile, net_load_profile, year, a):
             if net_load_profile[i] < 0:
                 total_cost_with_pv[i] = 0
             else:
-                total_cost_with_pv[i] = net_load_profile[i] * off_peak_cost      
+                total_cost_with_pv[i] = net_load_profile[i] * off_peak_cost     
                 
     return total_cost_no_pv.sum(), total_cost_with_pv.sum() 
 
 def get_cost_of_energy(pv_capacity, battery_capacity, a):
     
-    coe_with_pv = 0
-    coe_no_pv = 0
-    energy=0
-    energy_no_pv = 0
+    coe_with_pv = []
+    coe_no_pv = []
+    energy=[]
     # Capital Cost of Investment 
     pv_capital_cost = calculate_pv_capital_cost(pv_capacity, a)
     battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity
@@ -1154,12 +1155,14 @@ def get_cost_of_energy(pv_capacity, battery_capacity, a):
     
         total_cost_no_pv, total_cost_with_pv  = get_cost_of_energy_pv_and_no_pv(load_profile, net_load_profile, year, a)
         
-        coe_with_pv += total_cost_with_pv.sum()
-        coe_no_pv += total_cost_no_pv.sum()
-        energy = net_load_profile[net_load_profile > 0].sum()
-        energy_no_pv = load_profile[load_profile > 0].sum()
+        coe_with_pv.append(total_cost_with_pv.sum())
+        coe_no_pv.append(total_cost_no_pv.sum())
+        energy.append(load_profile.sum())
+        
+        
+    coe_with_system = [c/e for c,e in zip(coe_with_pv, energy)]
+    coe_without_system = [c/e for c,e in zip(coe_no_pv, energy)]
     
-    overall_coe_w_pv = coe_with_pv / energy
-    overall_coe_no_pv = coe_no_pv / energy_no_pv
+   
     
-    return overall_coe_w_pv, overall_coe_no_pv
+    return np.mean(coe_with_system), np.mean(coe_without_system)

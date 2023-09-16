@@ -76,7 +76,7 @@ def optimize_system_v2(solar_cost, battery_cost, load_profile, grid_load_sheddin
         a['full_ev_fleet'] = True
 
     # Run 
-    result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan_v3, x0 = initial_guess, args = (a,), bounds=bounds, constraints = cons , method= 'SLSQP')
+    result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan_v4, x0 = initial_guess, args = (a,), bounds=bounds, constraints = cons , method= 'SLSQP')
      
 
     # Extract results         
@@ -121,23 +121,25 @@ if __name__ == "__main__":
     
     
  
-    
-    scenario_names = [ "25% LS1", "50% LS1", "75% LS1", "100% LS1"]    
+    scenario_names = ["25% LS1", "50% LS1", "75% LS1", "100% LS1"]
+    # #scenario_names = [ "25% No LS LS1", "50% No LS LS1", "75% No LS LS1", "100% No LS LS1",
+    #                   "25% No LS LS2", "50% No LS LS2", "75% No LS LS2", "100% No LS LS2",
+    #                   "25% No LS LS3", "50% No LS LS3", "75% No LS LS3", "100% No LS LS3"]    
   #  load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
    # load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
     
     
   #  load_profile_list = load_profile_list + load_profile_list_ls_1 
-   #grid_load_shedding_schedules = [input.ls_annual_empty]
     grid_load_shedding_schedules = [input.ls_annual_1]
+    #grid_load_shedding_schedules = [input.ls_annual_1]
                          
     load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
-    #load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
-    #load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
-   # load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
-    load_profile_list =  load_profile_list
+    load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
+    load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
+    load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
+   # load_profile_list =  load_profile_list
     
-    #load_profile_list = load_profile_list #+ load_profile_list_ls_2 + load_profile_list_ls_3 
+    load_profile_list = load_profile_list #+ load_profile_list_ls_2 + load_profile_list_ls_3 
    # grid_load_shedding_schedules = [input.ls_annual_2]
     #next - grid LS ON, Ev scheduling LS OFF (scp before doing next )
     #grid_load_shedding_schedules = [input.ls_annual_3]
