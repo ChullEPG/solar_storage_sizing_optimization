@@ -385,7 +385,7 @@ def objective_function_with_solar_and_battery_degradation_loan_v4(x, a):
         
         if a['full_ev_fleet'] and value_of_charging_saved_by_pv_from_loadshedding.sum() > 0:
           # val_kwh_ls -= a['hiring_cost'] * net_load_lost_to_loadshedding.sum() * (1/a['kwh_km']) #$/km * kwh * km/kwh = $
-           val_kwh_ls -= net_load_lost_to_loadshedding.sum() * 0.182
+           val_kwh_ls -= (net_load_lost_to_loadshedding.sum() % 100) * 0.2
         
         load_profile = gross_load_minus_loadshedding
         net_load_profile = net_load_minus_loadshedding  # equals net load profile - 0 if there's no load shedding
