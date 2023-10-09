@@ -523,41 +523,6 @@ def get_cost_of_charging_v2(net_load_profile: np.ndarray, a):
         
     return total_cost_no_pv, total_cost_with_pv 
 
-def get_cost_of_charging_v3(net_load_profile: np.ndarray, a):
-    peak_hours = set(a['time_periods']['peak_hours'])
-    standard_hours = set(a['time_periods']['standard_hours'])
-    off_peak_hours = set(a['time_periods']['off_peak_hours'])
-    
-    load_profile = a['load_profile']
-    
-    # Initialize total cost variables
-    total_cost_no_pv = np.zeros(len(load_profile))
-    total_cost_with_pv = np.zeros(len(net_load_profile))
-    
-    # Calculate total cost of energy with and without PV
-    tariff_periods = [(a['time_of_use_tariffs_high'], a['high_period_start'], a['high_period_end']),
-                      (a['time_of_use_tariffs_low'], 0, a['high_period_start'])]
-    
-    for i, (tariffs, start, end) in enumerate(tariff_periods):
-        peak_cost, standard_cost, off_peak_cost = tariffs['peak'], tariffs['standard'], tariffs['off_peak']
-        hours = peak_hours if start <= i * 168 <= end else off_peak_hours
-        hours |= standard_hours
-        
-        total_cost_no_pv[i*168:(i+1)*168] = load_profile[i*168:(i+1)*168] * off_peak_cost
-        total_cost_with_pv[i*168:(i+1)*168] = np.maximum(net_load_profile[i*168:(i+1)*168], 0) * off_peak_cost
-        
-        for j in range(i*168, (i+1)*168):
-            if j % 24 in hours:
-                total_cost_no_pv[j] = load_profile[j] * peak_cost
-                total_cost_with_pv[j] = np.maximum(net_load_profile[j], 0) * peak_cost
-            elif j % 24 in standard_hours:
-                total_cost_no_pv[j] = load_profile[j] * standard_cost
-                total_cost_with_pv[j] = np.maximum(net_load_profile[j], 0) * standard_cost
-                
-    return total_cost_no_pv, total_cost_with_pv
-
-
-
 
 def get_energy_savings(cost_of_trickle_charging, load_profile, net_load_profile, year, a):
     
@@ -810,16 +775,18 @@ def get_kwh_ls_and_op_savings(pv_capacity, battery_capacity, a):
     battery_max_energy_throughput = generate_data.get_battery_max_energy_throughput(battery_capacity, a) # Get max battery energy throughput
 
     net_cash_flows = np.zeros(a['Rproj']) # Initialize array to hold net cash flows 
-
+    year_of_battery_lifetime = 0
     battery_exists = True # true until run out of repurchases
         
     for year in range(a['Rproj']):
         
-        # Update PV and battery capacity after degradation   
         usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
         
         if battery_exists:
-            usable_battery_capacity = calculations.get_usable_battery_capacity(battery_capacity, battery_energy_throughput, battery_max_energy_throughput, year, a)
+            annual_deg = (100 * (1 - a['battery_end_of_life_perc']))  / a['battery_lifetime_years'] / 100   # annual degradation rate (%)
+            usable_battery_capacity =  battery_capacity * (1 - (annual_deg * year_of_battery_lifetime))
+            year_of_battery_lifetime += 1 # update year of battery lifetime
+            
             
         # Generate PV Output profile 
         pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
@@ -834,25 +801,21 @@ def get_kwh_ls_and_op_savings(pv_capacity, battery_capacity, a):
             ###########################################################################################  
         
         # Check if the battery is still alive 
-        if battery_energy_throughput < battery_max_energy_throughput: 
+        if year < a['battery_lifetime_years']:
 
-            pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, usable_battery_capacity,  battery_energy_throughput, battery_max_energy_throughput, a)
+            pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, usable_battery_capacity, a)
             
-            battery_energy_throughput = battery_throughput # update total battery energy throughput 
             
         else:
             if repurchase_battery: 
                 battery_repurchase_cost = a['battery_cost_per_kWh'] * battery_capacity / (1 + a['discount rate'])**year # rebuy cost (discounted)
                 battery_residual_value = a['battery_residual_value_factor'] * a['battery_cost_per_kWh'] * battery_capacity
-                
                 years_left = a['Rproj'] - year
                 crf_repurchase = (a['interest rate'] * (1 + a['interest rate'])**years_left) / ((1 + a['interest rate'])**years_left - 1)
                 loan_installment += crf_repurchase * battery_repurchase_cost
-
-                usable_battery_capacity = battery_capacity # reset usable battery capacity
-                battery_energy_throughput = 0 # reset battery energy used
-                pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, battery_capacity, battery_energy_throughput,battery_max_energy_throughput,a)
-                battery_energy_throughput = battery_throughput
+                year_of_battery_lifetime = 0
+                pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, battery_capacity, a)
+                
                 if a['limit_battery_repurchases']:
                     repurchase_battery = False
             else:
@@ -1017,13 +980,13 @@ def get_cost_of_energy_pv_and_no_pv(load_profile, net_load_profile, year, a):
         
         
         if (i > a['high_period_start']) & (i <= a['high_period_end']): # high period (all peak)
-            peak_cost = a['time_of_use_tariffs_high']['peak'] * (1 + a['inflation rate'])**(year - 1)
-            standard_cost = a['time_of_use_tariffs_high']['standard'] * (1 + a['inflation rate'])**(year - 1)
-            off_peak_cost = a['time_of_use_tariffs_high']['off_peak'] * (1 + a['inflation rate'])**(year - 1) 
+            peak_cost = a['time_of_use_tariffs_high']['peak'] #* (1 + a['inflation rate'])**(year - 1)
+            standard_cost = a['time_of_use_tariffs_high']['standard'] #* (1 + a['inflation rate'])**(year - 1)
+            off_peak_cost = a['time_of_use_tariffs_high']['off_peak'] #* (1 + a['inflation rate'])**(year - 1) 
         else:
-            peak_cost = a['time_of_use_tariffs_low']['peak'] * (1 + a['inflation rate'])**(year - 1)
-            standard_cost = a['time_of_use_tariffs_low']['standard'] * (1 + a['inflation rate'])**(year - 1)
-            off_peak_cost = a['time_of_use_tariffs_low']['off_peak'] * (1 + a['inflation rate'])**(year - 1)       
+            peak_cost = a['time_of_use_tariffs_low']['peak'] #* (1 + a['inflation rate'])**(year - 1)
+            standard_cost = a['time_of_use_tariffs_low']['standard'] #* (1 + a['inflation rate'])**(year - 1)
+            off_peak_cost = a['time_of_use_tariffs_low']['off_peak'] #* (1 + a['inflation rate'])**(year - 1)       
              
         if curr_hour_of_week > 120: # weekend is all off-peak
             total_cost_no_pv[i] = load_profile[i] * off_peak_cost 
@@ -1155,7 +1118,7 @@ def get_cost_of_energy(pv_capacity, battery_capacity, a):
     
         total_cost_no_pv, total_cost_with_pv  = get_cost_of_energy_pv_and_no_pv(load_profile, net_load_profile, year, a)
         
-        coe_with_pv.append(total_cost_with_pv.sum())
+        coe_with_pv.append(total_cost_with_pv.sum() + cost_of_trickle_charging- val_kwh_ls)
         coe_no_pv.append(total_cost_no_pv.sum())
         energy.append(load_profile.sum())
         

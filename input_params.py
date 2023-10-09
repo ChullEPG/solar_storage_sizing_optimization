@@ -58,7 +58,10 @@ a = {
     # Solar PV Profile 
     'annual_capacity_factor': annual_capacity_factor,
     # EV charging load 
-    'load_profile': annual_100_perc_ev,
+    'load_profile': annual_25_perc_ev,
+    'load_profile_2': annual_50_perc_ev,
+    'load_profile_3': annual_75_perc_ev,
+    'load_profile_4': annual_100_perc_ev,
     # PV costs 
     'pv_cost_per_kw': solar.cost_per_kw,
     'pv_annual_maintenance_cost': solar.annual_maintenance_cost,
@@ -82,7 +85,7 @@ a = {
     'battery_end_of_life_perc': battery.end_of_life_perc,
     'battery_trickle_charging_rate': battery.trickle_charging_rate,
     'battery_lifetime_years': battery.lifetime_years,
-    'enable_trickle_charging': True,
+    'enable_trickle_charging': False,
     'repurchase_battery': True,
     'limit_battery_repurchases': False,
     # Energy costs and schedule 
@@ -102,7 +105,7 @@ a = {
     'kwh_km': market.kwh_km,
     'hiring_cost': market.hiring_cost,
     # Load shedding 
-    'load_shedding_bool': False,
+  #  'load_shedding_bool': False,
     'load_shedding_schedule': ls_annual_empty,
     'full_ev_fleet': False,
     # Loan model

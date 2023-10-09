@@ -69,6 +69,7 @@ def optimize_system_v2(solar_cost, battery_cost, load_profile, grid_load_sheddin
         load_shedding_scenario = "Grid LS on"
     else:
         load_shedding_scenario = "Grid LS off"
+    print(load_shedding_scenario)
     
     initial_guess = [500, 500]
     
@@ -120,9 +121,7 @@ if __name__ == "__main__":
     annual_100_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/100_perc/annual_ls_3.txt") 
     
     
-    scenario_names = ["25% LS1", "50% LS1", "75% LS1", "100% LS1",
-                      "25% LS2", "50% LS2", "75% LS2", "100% LS2",
-                      "25% LS3", "50% LS3", "75% LS3", "100% LS3"]
+    scenario_names = ["75% LS2", "100% LS2"]
  #   scenario_names = ["25% LS1", "50% LS1", "75% LS1", "100% LS1"]
     # #scenario_names = [ "25% No LS LS1", "50% No LS LS1", "75% No LS LS1", "100% No LS LS1",
     #                   "25% No LS LS2", "50% No LS LS2", "75% No LS LS2", "100% No LS LS2",
@@ -132,23 +131,23 @@ if __name__ == "__main__":
     
     
   #  load_profile_list = load_profile_list + load_profile_list_ls_1 
-    grid_load_shedding_schedules = [input.ls_annual_empty]
+    
     #grid_load_shedding_schedules = [input.ls_annual_1]
                          
-    load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
-    #load_profile_list = [ annual_75_perc_ev, annual_100_perc_ev]
+   # load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
+    
     load_profile_list_ls_1 = [annual_25_perc_ls_1,annual_50_perc_ls_1, annual_75_perc_ls_1, annual_100_perc_ls_1]
     load_profile_list_ls_2 = [annual_25_perc_ls_2, annual_50_perc_ls_2, annual_75_perc_ls_2, annual_100_perc_ls_2]
     load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
    # load_profile_list =  load_profile_list
     
-    load_profile_list = load_profile_list_ls_1 + load_profile_list_ls_2 + load_profile_list_ls_3 
+   # load_profile_list = load_profile_list_ls_1 + load_profile_list_ls_2 + load_profile_list_ls_3 
    # grid_load_shedding_schedules = [input.ls_annual_2]
     #next - grid LS ON, Ev scheduling LS OFF (scp before doing next )
     #grid_load_shedding_schedules = [input.ls_annual_3]
     # then - grid LS OFF, Ev scheduling LS ON 
     # scenario_names = ["25% LS2", '50% LS2', '75% LS2', '100% LS2',
-    #                   "25% LS3", '50% LS3', '75% LS3', '100% LS3']         
+    #                   "25% LS3", '50% LS3', '75% LS3', '10 d0% LS3']         
     # load_profile_list = load_profile_list_ls_2 + load_profile_list_ls_3
     # grid_load_shedding_schedules = [input.ls_annual_empty]
     # next, back to this one in case it messed up
@@ -156,8 +155,8 @@ if __name__ == "__main__":
     # scenario_names = ["25% No LS", "50% No LS", "75% No LS", "100% No LS"]
     # load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
 
-
-
+    grid_load_shedding_schedules = [input.ls_annual_2]
+    load_profile_list = [annual_75_perc_ev, annual_100_perc_ev]
 
     # solar_costs = [500, 600, 700, 800, 900] 
     # battery_costs = [100, 200, 300, 400, 500]
