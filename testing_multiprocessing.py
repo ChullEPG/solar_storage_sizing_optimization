@@ -121,7 +121,7 @@ if __name__ == "__main__":
     annual_100_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/100_perc/annual_ls_3.txt") 
     
     
-    scenario_names = ["75% LS2", "100% LS2"]
+    scenario_names = ["100% LS1", "100% LS2", "100% LS3"]
  #   scenario_names = ["25% LS1", "50% LS1", "75% LS1", "100% LS1"]
     # #scenario_names = [ "25% No LS LS1", "50% No LS LS1", "75% No LS LS1", "100% No LS LS1",
     #                   "25% No LS LS2", "50% No LS LS2", "75% No LS LS2", "100% No LS LS2",
@@ -155,8 +155,8 @@ if __name__ == "__main__":
     # scenario_names = ["25% No LS", "50% No LS", "75% No LS", "100% No LS"]
     # load_profile_list = [annual_25_perc_ev, annual_50_perc_ev, annual_75_perc_ev, annual_100_perc_ev]
 
-    grid_load_shedding_schedules = [input.ls_annual_2]
-    load_profile_list = [annual_75_perc_ev, annual_100_perc_ev]
+    grid_load_shedding_schedules = [input.ls_annual_1, input.ls_annual_2, input.ls_annual_3]
+    load_profile_list = [annual_100_perc_ev]
 
     # solar_costs = [500, 600, 700, 800, 900] 
     # battery_costs = [100, 200, 300, 400, 500]
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     combinations = []
 
     for idx, load_profile in enumerate(load_profile_list):
-        for jdx, grid_load_shedding_schedule in enumerate(grid_load_shedding_schedules): 
+        for jdx, grid_ldoad_shedding_schedule in enumerate(grid_load_sheding_schedules): 
             for solar_cost in solar_costs:
                 for battery_cost in battery_costs:
                     combinations.append((solar_cost, battery_cost, load_profile, grid_load_shedding_schedule, scenario_names[idx], bounds, a))

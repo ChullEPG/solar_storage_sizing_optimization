@@ -241,6 +241,71 @@ def get_energy_served_by_pv(pv_capacity, battery_capacity, load_profile, a):
 
     return total_energy_served_by_pv
 
+
+
+def get_energy_served_by_pv_v2(pv_capacity, battery_capacity, load_profile, a):
+    '''
+    Energy from PV directly to EV load, not including energy that goes to the battery'''
+    total_energy_served_by_pv = 0 
+    total_energy_served_by_batt =0
+    
+    load_profile = np.array(load_profile) # for usage in np.where function
+    
+    battery_exists = True
+    this_yr_battery_throughput=0
+    repurchase_battery = True
+    
+    year_of_battery_lifetime = 0
+
+    for year in range(a['Rproj']):
+ # Update PV and battery capacity after degradation   
+        usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
+        
+        if battery_exists:
+            annual_deg = (100 * (1 - a['battery_end_of_life_perc']))  / a['battery_lifetime_years'] / 100   # annual degradation rate (%)
+            usable_battery_capacity =  battery_capacity * (1 - (annual_deg * year_of_battery_lifetime))
+            year_of_battery_lifetime += 1 # update year of battery lifetime
+            
+        # Generate PV Output profile 
+        pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
+        
+        # Initialize battery repurchae cost, residual value, and cost of trickle charging (these are all zero at beginning and change throughout)
+        battery_repurchase_cost = 0
+        battery_residual_value = 0
+        cost_of_trickle_charging = 0
+            
+         ###########################################################################################
+          # Battery
+          ###########################################################################################  
+        
+        # Check if the battery is still alive 
+        if year < a['battery_lifetime_years']:
+
+            pv_with_battery_output_profile, this_yr_battery_throughput = generate_data.simulate_battery_storage_and_get_battery_throughput(pv_output_profile, usable_battery_capacity, a)
+            
+            
+        else:
+            if repurchase_battery: 
+                year_of_battery_lifetime = 0
+                pv_with_battery_output_profile, this_yr_battery_throughput = generate_data.simulate_battery_storage_and_get_battery_throughput(pv_output_profile, battery_capacity, a)
+                
+                if a['limit_battery_repurchases']:
+                    repurchase_battery = False
+            else:
+                pv_with_battery_output_profile = pv_output_profile 
+                battery_exists = False
+                usable_battery_capacity = 0
+                
+               
+                
+        energy_served_by_pv = np.where((pv_with_battery_output_profile > 0) & (load_profile > 0), np.minimum(load_profile, pv_with_battery_output_profile), 0)
+        total_energy_served_by_batt += this_yr_battery_throughput
+        total_energy_served_by_pv += energy_served_by_pv.sum() - this_yr_battery_throughput
+        
+        
+
+    return total_energy_served_by_pv, total_energy_served_by_batt
+
 def calculate_lcoe_pv(optimal_pv_capacity, optimal_battery_capacity, load_profile, a):
     npc = get_pv_net_present_cost(optimal_pv_capacity, a)
     energy = get_energy_served_by_pv(optimal_pv_capacity, optimal_battery_capacity, load_profile, a)
@@ -802,7 +867,6 @@ def get_kwh_ls_and_op_savings(pv_capacity, battery_capacity, a):
         
         # Check if the battery is still alive 
         if year < a['battery_lifetime_years']:
-
             pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, usable_battery_capacity, a)
             
             
@@ -1037,15 +1101,19 @@ def get_cost_of_energy(pv_capacity, battery_capacity, a):
     net_cash_flows = np.zeros(a['Rproj']) # Initialize array to hold net cash flows 
     
     battery_exists = True # true until run out of repurchases
-        
+    year_of_battery_lifetime = 0
     #for year in tqdm(range(a['Rproj']), desc="Optimizing", ncols=100, miniters = 0, bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}", disable = True):
     for year in range(a['Rproj']):
         
         # Update PV and battery capacity after degradation   
         usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
         
+        
         if battery_exists:
-            usable_battery_capacity = calculations.get_usable_battery_capacity(battery_capacity, battery_energy_throughput, battery_max_energy_throughput, year, a)
+            annual_deg = (100 * (1 - a['battery_end_of_life_perc']))  / a['battery_lifetime_years'] / 100   # annual degradation rate (%)
+            usable_battery_capacity =  battery_capacity * (1 - (annual_deg * year_of_battery_lifetime))
+            year_of_battery_lifetime += 1 # update year of battery lifetime
+            
             
         # Generate PV Output profile 
         pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
@@ -1055,30 +1123,25 @@ def get_cost_of_energy(pv_capacity, battery_capacity, a):
         battery_residual_value = 0
         cost_of_trickle_charging = 0
             
-         ###########################################################################################
-          # Battery
-          ###########################################################################################  
+            ###########################################################################################
+            # Battery
+            ###########################################################################################  
         
         # Check if the battery is still alive 
-        if battery_energy_throughput < battery_max_energy_throughput: 
-
-            pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, usable_battery_capacity,  battery_energy_throughput, battery_max_energy_throughput, a)
+        if year < a['battery_lifetime_years']:
+            pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, usable_battery_capacity, a)
             
-            battery_energy_throughput = battery_throughput # update total battery energy throughput 
             
         else:
             if repurchase_battery: 
                 battery_repurchase_cost = a['battery_cost_per_kWh'] * battery_capacity / (1 + a['discount rate'])**year # rebuy cost (discounted)
                 battery_residual_value = a['battery_residual_value_factor'] * a['battery_cost_per_kWh'] * battery_capacity
-                
                 years_left = a['Rproj'] - year
                 crf_repurchase = (a['interest rate'] * (1 + a['interest rate'])**years_left) / ((1 + a['interest rate'])**years_left - 1)
                 loan_installment += crf_repurchase * battery_repurchase_cost
-
-                usable_battery_capacity = battery_capacity # reset usable battery capacity
-                battery_energy_throughput = 0 # reset battery energy used
-                pv_with_battery_output_profile, battery_throughput, cost_of_trickle_charging = generate_data.simulate_battery_storage_v4(pv_output_profile, battery_capacity, battery_energy_throughput,battery_max_energy_throughput,a)
-                battery_energy_throughput = battery_throughput
+                year_of_battery_lifetime = 0
+                pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, battery_capacity, a)
+                
                 if a['limit_battery_repurchases']:
                     repurchase_battery = False
             else:
