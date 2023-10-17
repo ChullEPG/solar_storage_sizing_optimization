@@ -107,7 +107,7 @@ a = {
     # Load shedding 
   #  'load_shedding_bool': False,
     'load_shedding_schedule': ls_annual_empty,
-    'full_ev_fleet': False,
+    'full_ev_fleet': True,
     # Loan model
   #  'loan_payback_period': market.loan_payback_period,
     # Battery cell specs

@@ -155,6 +155,61 @@ def calculate_crf(a):
     return (a['interest rate'] * (1 + a['interest rate'])**a['Rproj']) / ((1 + a['interest rate'])**a['Rproj'] - 1)
 
 
+def get_batt_net_present_cost(pv_capacity, battery_capacity, a):
+   
+    battery_capital_cost = a['battery_cost_per_kWh'] * battery_capacity
+    loan_installment = calculate_crf(a) * (battery_capital_cost)
+    battery_maintenance_cost = a['battery_annual_maintenance_cost'] * battery_capacity
+    repurchase_battery = a['repurchase_battery']
+    battery_exists = True 
+    npc = 0
+
+    for year in range(a['Rproj']):
+        
+        # Update PV and battery capacity after degradation   
+        usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
+        
+        if battery_exists:
+            annual_deg = (100 * (1 - a['battery_end_of_life_perc']))  / a['battery_lifetime_years'] / 100   # annual degradation rate (%)
+            usable_battery_capacity =  battery_capacity * (1 - (annual_deg * year_of_battery_lifetime))
+            year_of_battery_lifetime += 1 # update year of battery lifetime
+            
+        # Generate PV Output profile 
+        pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
+        
+        # Initialize battery repurchae cost, residual value, and cost of trickle charging (these are all zero at beginning and change throughout)
+        battery_repurchase_cost = 0
+        battery_residual_value = 0
+        cost_of_trickle_charging = 0
+        
+        # Check if the battery is still alive 
+        if year < a['battery_lifetime_years']:
+
+            pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, usable_battery_capacity, a)
+            
+            
+        else:
+            if repurchase_battery: 
+                battery_repurchase_cost = a['battery_cost_per_kWh'] * battery_capacity / (1 + a['discount rate'])**year # rebuy cost (discounted)
+                battery_residual_value = a['battery_residual_value_factor'] * a['battery_cost_per_kWh'] * battery_capacity
+                years_left = a['Rproj'] - year
+                crf_repurchase = (a['interest rate'] * (1 + a['interest rate'])**years_left) / ((1 + a['interest rate'])**years_left - 1)
+                loan_installment += crf_repurchase * battery_repurchase_cost
+                year_of_battery_lifetime = 0
+                pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, battery_capacity, a)
+                
+                if a['limit_battery_repurchases']:
+                    repurchase_battery = False
+            else:
+                pv_with_battery_output_profile = pv_output_profile 
+                battery_maintenance_cost = 0
+                battery_exists = False
+                usable_battery_capacity = 0
+                
+        npc +=  (loan_installment + battery_maintenance_cost - battery_residual_value + cost_of_trickle_charging)/((1 + a['discount rate']) ** year)
+
+    
+    return npc # lcoe
 
 
 def get_pv_net_present_cost(pv_capacity, a):
@@ -312,6 +367,19 @@ def calculate_lcoe_pv(optimal_pv_capacity, optimal_battery_capacity, load_profil
     
     return npc / energy
 
+def calculate_normalized_lcoe(lcoe_pv, lcoe_batt, a): #lcoe_sys?
+    batt_cost = get_batt_net_present_cost(optimal_pv_capacity, optimal_battery_capacity, a)
+    pv_cost = get_pv_net_present_cost(optimal_pv_capacity, a)
+    system_cost = batt_cost+pv_cost
+    system_energy = get_energy_served_by_system(optimal_pv_capacity, optimal_battery_capacity, load_profile, a)
+    
+    
+    energy_served_by_pv,energy_served_by_batt = get_energy_served_by_pv_v2(optimal_pv_capacity, optimal_battery_capacity, load_profile, a)
+    energy_served_by_sys = energy_served_by_pv + energy_served_by_batt
+    #cost_of_energy_for_system = lcoe_sys * energy-served_by_sys
+    #cost_of_energy_for_non_system = grid_prices * energy_served by grid
+    #total_demand
+    return #(cost_of_energy_for_system + cost_of_energy_for_non_system) / total_demand
 
 def calculate_lcoe_batt(pv_capacity, battery_capacity, a):
    
@@ -389,6 +457,9 @@ def calculate_lcoe_batt(pv_capacity, battery_capacity, a):
     
     return npc/ battery_TOTAL_energy_throughput # lcoe
 
+
+
+##### Grid average price
 
 def compute_p_grid(load_profile, a):
     cost = 0
