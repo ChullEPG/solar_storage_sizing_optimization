@@ -163,6 +163,7 @@ def get_batt_net_present_cost(pv_capacity, battery_capacity, a):
     repurchase_battery = a['repurchase_battery']
     battery_exists = True 
     npc = 0
+    year_of_battery_lifetime =0
 
     for year in range(a['Rproj']):
         
@@ -298,7 +299,7 @@ def get_energy_served_by_pv(pv_capacity, battery_capacity, load_profile, a):
 
 
 
-def get_energy_served_by_pv_v2(pv_capacity, battery_capacity, load_profile, a):
+def get_energy_served_by_system(pv_capacity, battery_capacity, load_profile, a):
     '''
     Energy from PV directly to EV load, not including energy that goes to the battery'''
     total_energy_served_by_pv = 0 
@@ -311,7 +312,8 @@ def get_energy_served_by_pv_v2(pv_capacity, battery_capacity, load_profile, a):
     repurchase_battery = True
     
     year_of_battery_lifetime = 0
-
+    total_energy_served_by_system = 0
+    
     for year in range(a['Rproj']):
  # Update PV and battery capacity after degradation   
         usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
@@ -351,15 +353,14 @@ def get_energy_served_by_pv_v2(pv_capacity, battery_capacity, load_profile, a):
                 battery_exists = False
                 usable_battery_capacity = 0
                 
-               
-                
         energy_served_by_pv = np.where((pv_with_battery_output_profile > 0) & (load_profile > 0), np.minimum(load_profile, pv_with_battery_output_profile), 0)
-        total_energy_served_by_batt += this_yr_battery_throughput
-        total_energy_served_by_pv += energy_served_by_pv.sum() - this_yr_battery_throughput
+        energy_served_by_system = np.where((pv_with_battery_output_profile > 0) & (load_profile > 0), np.minimum(load_profile, pv_with_battery_output_profile), 0)
+        total_energy_served_by_system += energy_served_by_system.sum()
+      #  total_energy_served_by_batt += this_yr_battery_throughput
+       # total_energy_served_by_pv += energy_served_by_pv.sum() - this_yr_battery_throughput
         
         
-
-    return total_energy_served_by_pv, total_energy_served_by_batt
+    return total_energy_served_by_system
 
 def calculate_lcoe_pv(optimal_pv_capacity, optimal_battery_capacity, load_profile, a):
     npc = get_pv_net_present_cost(optimal_pv_capacity, a)
@@ -367,19 +368,7 @@ def calculate_lcoe_pv(optimal_pv_capacity, optimal_battery_capacity, load_profil
     
     return npc / energy
 
-def calculate_normalized_lcoe(lcoe_pv, lcoe_batt, a): #lcoe_sys?
-    batt_cost = get_batt_net_present_cost(optimal_pv_capacity, optimal_battery_capacity, a)
-    pv_cost = get_pv_net_present_cost(optimal_pv_capacity, a)
-    system_cost = batt_cost+pv_cost
-    system_energy = get_energy_served_by_system(optimal_pv_capacity, optimal_battery_capacity, load_profile, a)
-    
-    
-    energy_served_by_pv,energy_served_by_batt = get_energy_served_by_pv_v2(optimal_pv_capacity, optimal_battery_capacity, load_profile, a)
-    energy_served_by_sys = energy_served_by_pv + energy_served_by_batt
-    #cost_of_energy_for_system = lcoe_sys * energy-served_by_sys
-    #cost_of_energy_for_non_system = grid_prices * energy_served by grid
-    #total_demand
-    return #(cost_of_energy_for_system + cost_of_energy_for_non_system) / total_demand
+
 
 def calculate_lcoe_batt(pv_capacity, battery_capacity, a):
    
@@ -458,10 +447,7 @@ def calculate_lcoe_batt(pv_capacity, battery_capacity, a):
     return npc/ battery_TOTAL_energy_throughput # lcoe
 
 
-
-##### Grid average price
-
-def compute_p_grid(load_profile, a):
+def compute_grid_cost(load_profile, a):
     cost = 0
     for hour, kwh in enumerate(load_profile):
         # In winter
@@ -486,10 +472,126 @@ def compute_p_grid(load_profile, a):
             
         else:
             cost += kwh * off_peak
-            
-    p_grid = cost/load_profile.sum()
     
-    return p_grid
+    return cost
+
+def calculate_grid_tariff(pv_capacity, battery_capacity, a):
+   
+    total_grid_cost = 0
+    # Capital Cost of Investment 
+   
+    
+    repurchase_battery = a['repurchase_battery'] # Initialize battery repurchase bool     
+    battery_exists = True # true until run out of repurchases
+    
+    year_of_battery_lifetime = 0
+
+    for year in range(a['Rproj']):
+        
+        # Update PV and battery capacity after degradation   
+        usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a) 
+        
+        if battery_exists:
+            annual_deg = (100 * (1 - a['battery_end_of_life_perc']))  / a['battery_lifetime_years'] / 100   # annual degradation rate (%)
+            usable_battery_capacity =  battery_capacity * (1 - (annual_deg * year_of_battery_lifetime))
+            year_of_battery_lifetime += 1 # update year of battery lifetime
+            
+        # Generate PV Output profile 
+        pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity) 
+        
+        # Initialize battery repurchae cost, residual value, and cost of trickle charging (these are all zero at beginning and change throughout)
+        battery_repurchase_cost = 0
+        battery_residual_value = 0
+        cost_of_trickle_charging = 0
+        
+        # Check if the battery is still alive 
+        if year < a['battery_lifetime_years']:
+            pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, usable_battery_capacity, a)  
+        else:
+            if repurchase_battery: 
+                year_of_battery_lifetime = 0
+                pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, battery_capacity, a)
+                if a['limit_battery_repurchases']:
+                    repurchase_battery = False
+            else:
+                pv_with_battery_output_profile = pv_output_profile 
+                battery_exists = False
+                usable_battery_capacity = 0
+                
+        net_load_profile = a['load_profile'] - pv_with_battery_output_profile
+        
+        total_grid_cost += compute_grid_cost(net_load_profile, a)
+        
+    return total_grid_cost
+
+def get_val_kwh_ls(pv_capacity, battery_capacity, a):
+    total_val_kwh_ls=0
+    repurchase_battery = a['repurchase_battery']
+    battery_exists = True 
+    year_of_battery_lifetime = 0
+    
+    for year in range(a['Rproj']):
+        usable_pv_capacity = calculations.get_usable_pv_capacity(pv_capacity, year, a)   
+        if battery_exists:
+            annual_deg = (100 * (1 - a['battery_end_of_life_perc']))  / a['battery_lifetime_years'] / 100   # annual degradation rate (%)
+            usable_battery_capacity =  battery_capacity * (1 - (annual_deg * year_of_battery_lifetime))
+            year_of_battery_lifetime += 1 # update year of battery lifetime
+                      
+        # Generate PV Output profile 
+        pv_output_profile = generate_data.get_pv_output(a['annual_capacity_factor'], usable_pv_capacity)
+        
+        # Check if the battery is still alive 
+        if year < a['battery_lifetime_years']:
+            pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, usable_battery_capacity, a)
+
+        else:
+            if repurchase_battery: 
+                year_of_battery_lifetime = 0
+                pv_with_battery_output_profile, cost_of_trickle_charging = generate_data.simulate_battery_storage_v5(pv_output_profile, battery_capacity, a)
+                if a['limit_battery_repurchases']:
+                    repurchase_battery = False
+            else:
+                pv_with_battery_output_profile = pv_output_profile 
+                battery_exists = False
+                usable_battery_capacity = 0
+                
+                
+        loadshedding_schedule = a['load_shedding_schedule']
+        net_load_profile = a['load_profile'] - pv_with_battery_output_profile
+        gross_load_lost_to_loadshedding = np.array([a['load_profile'][i] if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
+        
+        # Profile of kWh that would have been lost to loadshedding but are saved by the solar + battery generation [these are beneficial, and not to be charged $$ for]
+        saved_free_kWh = [min(pv_with_battery_output_profile[i], gross_load_lost_to_loadshedding[i]) if is_shedding else 0 for i, is_shedding in enumerate(loadshedding_schedule)]
+        
+        # Profile of kWh that would be lost to load shedding WITH solar and battery
+        net_load_lost_to_loadshedding = np.array([net_load_profile[i] if is_shedding and net_load_profile[i] > 0 else 0 for i, is_shedding in enumerate(loadshedding_schedule)])
+        gross_load_minus_loadshedding = a['load_profile'] - gross_load_lost_to_loadshedding
+        net_load_minus_loadshedding = net_load_profile - net_load_lost_to_loadshedding 
+        value_of_charging_saved_by_pv_from_loadshedding = get_cost_of_missed_passengers_from_loadshedding_v2(year, saved_free_kWh, a)
+        val_kwh_ls = value_of_charging_saved_by_pv_from_loadshedding.sum()
+        
+        total_val_kwh_ls += val_kwh_ls
+    return total_val_kwh_ls
+
+def calculate_normalized_lcoe(optimal_pv_capacity, optimal_battery_capacity, a): #lcoe_sys?
+    batt_cost = get_batt_net_present_cost(optimal_pv_capacity, optimal_battery_capacity, a)
+    pv_cost = get_pv_net_present_cost(optimal_pv_capacity, a)
+    system_cost = batt_cost + pv_cost
+    system_energy = get_energy_served_by_system(optimal_pv_capacity, optimal_battery_capacity, a['load_profile'], a)
+    lcoe_system = system_cost/system_energy
+    val_kwh_ls = get_val_kwh_ls(optimal_pv_capacity, optimal_battery_capacity, a)
+    # numerator terms
+    total_system_cost = lcoe_system * system_energy - val_kwh_ls
+    total_grid_cost = calculate_grid_tariff(optimal_pv_capacity, optimal_battery_capacity, a)
+    
+    # denominator
+    total_EV_demand = a['load_profile'].sum() * a['Rproj']
+    
+    normalized_lcoe = (total_system_cost + total_grid_cost) / total_EV_demand
+    
+    return normalized_lcoe
+
+
     
     
 ########## Payback period ############
