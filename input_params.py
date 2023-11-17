@@ -27,6 +27,21 @@ annual_50_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_50_perc_ev.tx
 annual_75_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_75_perc_ev.txt")
 annual_100_perc_ev = np.loadtxt(f"processed_ev_schedule_data/annual_100_perc_ev.txt")
 
+annual_25_perc_ls_1 = np.loadtxt(f"processed_ev_schedule_data/25_perc/annual_ls_1.txt") 
+annual_50_perc_ls_1 = np.loadtxt(f"processed_ev_schedule_data/50_perc/annual_ls_1.txt") 
+annual_75_perc_ls_1 = np.loadtxt(f"processed_ev_schedule_data/75_perc/annual_ls_1.txt") 
+annual_100_perc_ls_1 = np.loadtxt(f"processed_ev_schedule_data/100_perc/annual_ls_1.txt") 
+
+annual_25_perc_ls_2 = np.loadtxt(f"processed_ev_schedule_data/25_perc/annual_ls_2.txt") 
+annual_50_perc_ls_2 = np.loadtxt(f"processed_ev_schedule_data/50_perc/annual_ls_2.txt") 
+annual_75_perc_ls_2 = np.loadtxt(f"processed_ev_schedule_data/75_perc/annual_ls_2.txt") 
+annual_100_perc_ls_2 = np.loadtxt(f"processed_ev_schedule_data/100_perc/annual_ls_2.txt") 
+
+annual_25_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/25_perc/annual_ls_3.txt") 
+annual_50_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/50_perc/annual_ls_3.txt") 
+annual_75_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/75_perc/annual_ls_3.txt") 
+annual_100_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/100_perc/annual_ls_3.txt") 
+
 # Mixed fleet, with load shedding
 annual_ls_1 = np.loadtxt(f"processed_ev_schedule_data/annual_ls_1.txt")
 
@@ -58,10 +73,12 @@ a = {
     # Solar PV Profile 
     'annual_capacity_factor': annual_capacity_factor,
     # EV charging load 
-    'load_profile': annual_25_perc_ev,
+    'load_profile': annual_50_perc_ls_1,
     'load_profile_2': annual_50_perc_ev,
     'load_profile_3': annual_75_perc_ev,
     'load_profile_4': annual_100_perc_ev,
+    'load_profile_base': annual_100_perc_ev,
+    'load_profile_ls_1': annual_100_perc_ls_1,
     # PV costs 
     'pv_cost_per_kw': solar.cost_per_kw,
     'pv_annual_maintenance_cost': solar.annual_maintenance_cost,
@@ -107,7 +124,9 @@ a = {
     # Load shedding 
   #  'load_shedding_bool': False,
     'load_shedding_schedule': ls_annual_empty,
-    'full_ev_fleet': True,
+    'load_shedding_schedule_inactive': ls_annual_empty,
+    'load_shedding_schedule_active': ls_annual_1,
+    'full_ev_fleet': False,
     # Loan model
   #  'loan_payback_period': market.loan_payback_period,
     # Battery cell specs

@@ -14,26 +14,26 @@ from tqdm import tqdm
 
 
 
-###### OPTIMIZE SYSTEM varying load profile ##########
-def optimize_system(load_profile, load_profile_name, bounds, a):
-    this_run_start_time = time.time()
-    a['load_profile'] = load_profile
+# ###### OPTIMIZE SYSTEM varying load profile ##########
+# def optimize_system(load_profile, load_profile_name, bounds, a):
+#     this_run_start_time = time.time()
+#     a['load_profile'] = load_profile
 
-    # Run 
-    result = differential_evolution(optimization.objective_function_with_solar_and_battery_degradation_loan_v3,
-                                    bounds, args=(a,), maxiter=300)
+#     # Run 
+#     result = differential_evolution(optimization.objective_function_with_solar_and_battery_degradation_loan_v3,
+#                                     bounds, args=(a,), maxiter=300)
 
-    # Extract results         
-    optimal_pv_capacity = result.x[0]
-    optimal_battery_capacity = result.x[1]
+#     # Extract results         
+#     optimal_pv_capacity = result.x[0]
+#     optimal_battery_capacity = result.x[1]
 
-    # Convert to USD
-    max_npv = result.fun
+#     # Convert to USD
+#     max_npv = result.fun
 
-    this_run_end_time = time.time()
-    this_run_time = (this_run_end_time - this_run_start_time) / 60
+#     this_run_end_time = time.time()
+#     this_run_time = (this_run_end_time - this_run_start_time) / 60
 
-    return optimal_pv_capacity, optimal_battery_capacity, -max_npv, this_run_time, load_profile_name
+#     return optimal_pv_capacity, optimal_battery_capacity, -max_npv, this_run_time, load_profile_name
 
 
 ###### OPTIMIZE SYSTEM varying load profile with COBYLA ##########
@@ -77,7 +77,7 @@ def optimize_system_v2(solar_cost, battery_cost, load_profile, grid_load_sheddin
         a['full_ev_fleet'] = True
 
     # Run 
-    result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan_v4, x0 = initial_guess, args = (a,), bounds=bounds, constraints = cons , method= 'SLSQP')
+    result = minimize(optimization.objective_function_with_solar_and_battery_degradation_loan_v4, x0 = initial_guess, args = (a,), bounds=bounds, constraints = cons, method= 'SLSQP', maxiter = 200)
      
 
     # Extract results         
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     annual_100_perc_ls_3 = np.loadtxt(f"processed_ev_schedule_data/100_perc/annual_ls_3.txt") 
     
     
-    scenario_names = ["100% LS1", "100% LS2", "100% LS3"]
+    scenario_names = ["Incremental"]
  #   scenario_names = ["25% LS1", "50% LS1", "75% LS1", "100% LS1"]
     # #scenario_names = [ "25% No LS LS1", "50% No LS LS1", "75% No LS LS1", "100% No LS LS1",
     #                   "25% No LS LS2", "50% No LS LS2", "75% No LS LS2", "100% No LS LS2",
@@ -133,8 +133,8 @@ if __name__ == "__main__":
     load_profile_list_ls_3 = [annual_25_perc_ls_3, annual_50_perc_ls_3, annual_75_perc_ls_3, annual_100_perc_ls_3]
     
 
-    grid_load_shedding_schedules = [input.ls_annual_1, input.ls_annual_2, input.ls_annual_3]
-    load_profile_list = [annual_100_perc_ev]
+    grid_load_shedding_schedules = [input.ls_annual_empty]
+    load_profile_list = [annual_25_perc_ev]
 
     # solar_costs = [500, 600, 700, 800, 900] 
     # battery_costs = [100, 200, 300, 400, 500]
@@ -188,22 +188,22 @@ if __name__ == "__main__":
             lcoe_batt = economic_analysis.calculate_lcoe_batt(optimal_pv_capacity, optimal_battery_capacity, a)
             f2.write(f"LCOE_PV: {lcoe_pv}$/kWh \n")
             f2.write(f"LCOE_Batt: {lcoe_batt}$/kWh \n")
-            p_grid = economic_analysis.compute_p_grid(load_profile, a)
-            f2.write(f"P_grid: {p_grid}$/kWh \n")
-            lps = load_profile.sum()
-            f2.write(f"Load profile sum {lps} \n")
-            kwh_ls, op_savings = economic_analysis.get_kwh_ls_and_op_savings(optimal_pv_capacity, optimal_battery_capacity, a)
-            f2.write(f"kwh_ls: {kwh_ls} \n")
-            f2.write(f"op_savings: {op_savings} \n")
-            # demand served by system
-            d_sys = economic_analysis.get_demand_served_by_system(optimal_pv_capacity, optimal_battery_capacity, a)
-            f2.write(f"d_sys: {d_sys} \n")
-            carbon_savings = d_sys * 0.95 # SA grid intensity = 0.95kgCO2/kWh
-            f2.write(f"carbon_savings: {carbon_savings} \n")
+            # p_grid = economic_analysis.compute_p_grid(load_profile, a)
+            # f2.write(f"P_grid: {p_grid}$/kWh \n")
+            # lps = load_profile.sum()
+            # f2.write(f"Load profile sum {lps} \n")
+            # kwh_ls, op_savings = economic_analysis.get_kwh_ls_and_op_savings(optimal_pv_capacity, optimal_battery_capacity, a)
+            # f2.write(f"kwh_ls: {kwh_ls} \n")
+            # f2.write(f"op_savings: {op_savings} \n")
+            # # demand served by system
+            # d_sys = economic_analysis.get_demand_served_by_system(optimal_pv_capacity, optimal_battery_capacity, a)
+            # f2.write(f"d_sys: {d_sys} \n")
+            # carbon_savings = d_sys * 0.95 # SA grid intensity = 0.95kgCO2/kWh
+            # f2.write(f"carbon_savings: {carbon_savings} \n")
             
-            coe_w_pv, coe_no_pv = economic_analysis.get_cost_of_energy(optimal_pv_capacity, optimal_battery_capacity, a)
-            f2.write(f"coe_w_pv: {coe_w_pv} \n")
-            f2.write(f"coe_no_pv: {coe_no_pv} \n")
+            # coe_w_pv, coe_no_pv = economic_analysis.get_cost_of_energy(optimal_pv_capacity, optimal_battery_capacity, a)
+            # f2.write(f"coe_w_pv: {coe_w_pv} \n")
+            # f2.write(f"coe_no_pv: {coe_no_pv} \n")
             
         
         # Print the results
@@ -217,13 +217,13 @@ if __name__ == "__main__":
         print("Investment cost: $", investment_cost) 
         print("LCOE PV", lcoe_pv)
         print("LCOE Batt", lcoe_batt)
-        print("Avg grid price", p_grid)
+        # print("Avg grid price", p_grid)
         print("Execution Time (minutes):", execution_time)
-        print("kwh_ls:", kwh_ls)
-        print('op_savings:', op_savings)
-        print("d_sys:", d_sys)
-        print("carbon_savings:", carbon_savings)
-        print()
+        # print("kwh_ls:", kwh_ls)
+        # print('op_savings:', op_savings)
+        # print("d_sys:", d_sys)
+        # print("carbon_savings:", carbon_savings)
+        # print()
 
             
     end_time = time.time()
